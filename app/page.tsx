@@ -1,37 +1,12 @@
 import Link from "next/link"
 import { DollarSign, TrendingUp, PieChart, Users } from "lucide-react"
+import Navbar from "../components/Navbar" 
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-gray-200">
       <header className="bg-green-600 text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">FinTech Solutions</h1>
-          <nav>
-            <ul className="flex space-x-6">
-              <li>
-                <Link href="#" className="hover:text-green-200">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="hover:text-green-200">
-                  Services
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="hover:text-green-200">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="hover:text-green-200">
-                  Contact
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </div>
+        <Navbar />
       </header>
 
       <main className="container mx-auto px-4 py-8">
@@ -160,5 +135,3 @@ export default function Home() {
     </div>
   )
 }
-
-
