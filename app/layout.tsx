@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
+import { ConvexClientProvider } from "./ConvexClientProvider";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -33,7 +34,7 @@ export default function RootLayout({
           "min-h-screen bg-gradient-to-br from-[#F8F4E3] to-[#E8E1C8] text-gray-800 antialiased",
         )}
       >
-        {children}
+        <ConvexClientProvider>{children}</ConvexClientProvider>
       </body>
     </html>
   )
