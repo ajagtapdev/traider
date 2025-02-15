@@ -1,101 +1,211 @@
-import Image from "next/image";
+'use client'
+import React, { useState } from 'react';
+import OpenAI from 'openai';
+
+
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY,
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+});
+
+const App = () => {
+  const [response, setResponse] = useState<string>('');
+
+  const fetchData = async () => {
+    const completion = await openai.chat.completions.create({
+      model: "deepseek-ai/deepseek-r1",
+      messages: [{"role":"user","content":"Which number is larger, 9.11 or 9.8?"}],
+      temperature: 0.6,
+      top_p: 0.7,
+      max_tokens: 4096,
+      stream: true
+    });
+
+    let result = '';
+    for await (const chunk of completion) {
+      result += chunk.choices[0]?.delta?.content || '';
+    }
+    setResponse(result);
+  };
+
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>OpenAI Response</h1>
+      <button onClick={fetchData} style={{ padding: '10px 20px', fontSize: '16px' }}>
+        Fetch Data
+      </button>
+      <div style={{ marginTop: '20px', whiteSpace: 'pre-wrap', backgroundColor: '#f0f0f0', padding: '10px', borderRadius: '5px' }}>
+        {response}
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
+/*
+  * import Link from "next/link"
+import { DollarSign, TrendingUp, PieChart, Users } from "lucide-react"
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-black text-gray-200">
+      <header className="bg-green-600 text-white p-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold">FinTech Solutions</h1>
+          <nav>
+            <ul className="flex space-x-6">
+              <li>
+                <Link href="#" className="hover:text-green-200">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-green-200">
+                  Services
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-green-200">
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-green-200">
+                  Contact
+                </Link>
+              </li>
+            </ul>
+          </nav>
         </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <section className="mb-16 text-center">
+          <h2 className="text-4xl font-bold mb-4 text-green-400">Your Trusted Partner in Financial Technology</h2>
+          <p className="text-xl mb-8 text-gray-400">Empowering your financial decisions with cutting-edge solutions</p>
+          <Link
+            href="#"
+            className="bg-green-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors"
+          >
+            Get Started
+          </Link>
+        </section>
+
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold mb-8 text-center text-green-400">Our Services</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                icon: DollarSign,
+                title: "Investment Planning",
+                description: "Maximize your returns with our expert investment strategies.",
+              },
+              {
+                icon: TrendingUp,
+                title: "Market Analysis",
+                description: "Stay ahead with our cutting-edge market analysis tools.",
+              },
+              {
+                icon: PieChart,
+                title: "Portfolio Management",
+                description: "Optimize your portfolio with our advanced management techniques.",
+              },
+              {
+                icon: Users,
+                title: "Financial Consulting",
+                description: "Get personalized advice from our team of financial experts.",
+              },
+            ].map((service, index) => (
+              <div
+                key={index}
+                className="bg-gray-900 p-6 rounded-lg shadow-lg hover:shadow-green-500/20 hover:shadow-xl transition-shadow"
+              >
+                <service.icon className="w-12 h-12 text-green-400 mb-4" />
+                <h3 className="text-xl font-semibold mb-2 text-white">{service.title}</h3>
+                <p className="text-gray-400">{service.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-16 bg-gray-900 p-8 rounded-lg">
+          <h2 className="text-3xl font-bold mb-6 text-center text-green-400">Why Choose Us?</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="flex items-start">
+              <div className="bg-green-600 text-white rounded-full p-2 mr-4">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Industry Experience</h3>
+                <p className="text-gray-400">Over 20 years of experience in the finance industry</p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <div className="bg-green-600 text-white rounded-full p-2 mr-4">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Cutting-edge Technology</h3>
+                <p className="text-gray-400">Advanced tools for accurate market predictions</p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <div className="bg-green-600 text-white rounded-full p-2 mr-4">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Personalized Service</h3>
+                <p className="text-gray-400">Tailored solutions to meet your financial goals</p>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <div className="bg-green-600 text-white rounded-full p-2 mr-4">
+                <PieChart className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2 text-white">Secure & Compliant</h3>
+                <p className="text-gray-400">Adherence to all financial regulations</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="text-center">
+          <h2 className="text-3xl font-bold mb-4 text-green-400">Ready to Take Control of Your Financial Future?</h2>
+          <p className="text-xl mb-8 text-gray-400">
+            Contact us now for a free consultation and start your journey to financial success.
+          </p>
+          <Link
+            href="#"
+            className="bg-green-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors text-lg"
+          >
+            Contact Us
+          </Link>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      <footer className="bg-gray-900 text-gray-400 py-8 mt-16">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p>&copy; 2025 FinTech Solutions. All rights reserved.</p>
+            <div className="mt-4 md:mt-0">
+              <Link href="#" className="hover:text-green-400 mr-4">
+                Privacy Policy
+              </Link>
+              <Link href="#" className="hover:text-green-400 mr-4">
+                Terms of Service
+              </Link>
+              <Link href="#" className="hover:text-green-400">
+                Contact
+              </Link>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
-  );
+  )
 }
+
+
+  */
