@@ -1,34 +1,41 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type React from "react"
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { cn } from "@/lib/utils"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Traider",
-  description: "Traider is a trading platform for everyone.",
-};
+  title: "Cream Aesthetic Trading Dashboard",
+  description: "A modern, cream-themed trading dashboard with semi-transparent elements",
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.7.0/chart.min.css"
+          integrity="sha512-TxZbN7EFJFyV+85pMMyNGcTgY9ukjgtBQi+7DZZyYf/8AxACd+5Qw+9lR8bsLdOBxIpKA2UviPj9iUwD91JbAA=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={cn(
+          inter.className,
+          "min-h-screen bg-gradient-to-br from-[#F8F4E3] to-[#E8E1C8] text-gray-800 antialiased",
+        )}
       >
         {children}
       </body>
     </html>
-  );
+  )
 }
+
