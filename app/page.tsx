@@ -2,7 +2,7 @@ import Link from "next/link"
 import { DollarSign, TrendingUp, PieChart, Users } from "lucide-react"
 import Navbar from "../components/Navbar" 
 
-export default function Home() {
+const Home = () => {
   return (
     <div className="min-h-screen bg-black text-gray-200">
       <header className="bg-green-600 text-white p-4">
@@ -135,3 +135,5 @@ export default function Home() {
     </div>
   )
 }
+
+export default Home; 
