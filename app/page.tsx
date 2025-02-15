@@ -8,12 +8,8 @@ import { api } from "../convex/_generated/api";
 
 
 
-<<<<<<< HEAD
 const Home = () => {
-=======
-export default function Home() {
   const tasks = useQuery(api.tasks.get);
->>>>>>> 7d1d206b4c19d3694c7e20c2fd462890d1a706d2
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#F8F4E3] to-[#E8E1C8]">
       <Sidebar />
@@ -28,7 +24,5 @@ export default function Home() {
   )
 }
 
-<<<<<<< HEAD
 export default Home; 
-=======
->>>>>>> 7d1d206b4c19d3694c7e20c2fd462890d1a706d2
+
