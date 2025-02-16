@@ -5,6 +5,7 @@ import Header from "@/components/header";
 import { TradingSimulator } from "@/components/trading-simulator";
 import ChatBot from "@/components/chatbot";
 
+
 const Simulator = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#F8F4E3] to-[#E8E1C8]">
