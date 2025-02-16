@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table"
 import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
-import Chatbot from "./Chatbot"
+import Chatbot from "./chatbot"
 import Contexts from "./Contexts"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
