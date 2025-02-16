@@ -110,7 +110,7 @@ export default function Home() {
                   y1={i * (dimensions.height / 20)}
                   x2={dimensions.width}
                   y2={i * (dimensions.height / 20)}
-                  stroke="#80b048"
+                  stroke="#509048"
                   strokeWidth="0.5"
                   variants={draw}
                   custom={i * 0.5} // Adjust the multiplier to speed up or slow down the sequence
@@ -128,14 +128,14 @@ export default function Home() {
                   strokeWidth="0.5"
                   variants={draw}
                   custom={i * 0.5 + 10} // Offset to start after horizontal lines
-                  whileHover={{ stroke: "#80b048", strokeWidth: 2 }}
+                  whileHover={{ stroke: "#509048", strokeWidth: 2 }}
                 />
               ))}
 
               {/* Abstract financial patterns */}
               <motion.path
                 d={`M ${dimensions.width * 0.1} ${dimensions.height * 0.3} Q ${dimensions.width * 0.15} ${dimensions.height * 0.05} ${dimensions.width * 0.2} ${dimensions.height * 0.3} T ${dimensions.width * 0.3} ${dimensions.height * 0.3} T ${dimensions.width * 0.4} ${dimensions.height * 0.3} T ${dimensions.width * 0.5} ${dimensions.height * 0.3}`}
-                stroke="#80b048"
+                stroke="#509048"
                 strokeWidth="2"
                 fill="none"
                 variants={draw}
@@ -149,7 +149,7 @@ export default function Home() {
                 fill="none"
                 variants={draw}
                 custom={21} // Reduced delay
-                whileHover={{ stroke: "#80b048" }}
+                whileHover={{ stroke: "#509048" }}
               />
 
               {/* Animated circles */}
@@ -157,7 +157,7 @@ export default function Home() {
                 cx={dimensions.width * 0.15}
                 cy={dimensions.height * 0.15}
                 r={dimensions.width * 0.05}
-                stroke="#80b048"
+                stroke="#509048"
                 strokeWidth="2"
                 fill="none"
                 variants={draw}
@@ -173,7 +173,7 @@ export default function Home() {
                 fill="none"
                 variants={draw}
                 custom={23} // Reduced delay
-                whileHover={{ stroke: "#80b048" }}
+                whileHover={{ stroke: "#509048" }}
               />
 
               {/* Pulsing elements */}
@@ -181,7 +181,7 @@ export default function Home() {
                 cx={dimensions.width * 0.5}
                 cy={dimensions.height * 0.5}
                 r="10"
-                fill="#80b048"
+                fill="#509048"
                 animate={pulse}
               />
               <motion.circle
@@ -195,7 +195,7 @@ export default function Home() {
                 cx={dimensions.width * 0.8}
                 cy={dimensions.height * 0.2}
                 r="12"
-                fill="#80b048"
+                fill="#509048"
                 animate={pulse}
               />
             </motion.svg>
@@ -215,7 +215,7 @@ export default function Home() {
               analytics to help you make informed trading decisions.
             </p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button className="bg-[#80b048] hover:bg-[#509048]/90 text-white px-8 py-6 text-lg">
+              <Button className="bg-[#509048] hover:bg-[#80b048]/90 text-white px-8 py-6 text-lg">
                 Create Account
               </Button>
             </motion.div>
@@ -239,14 +239,14 @@ export default function Home() {
                 variants={fadeIn}
                 whileHover={{ y: -10 }}
               >
-                <div className="w-16 h-16 bg-[#FDA4AF]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <LineChart className="w-8 h-8 text-[#FDA4AF]" />
+                <div className="w-16 h-16 bg-[#408830]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <LineChart className="w-8 h-8 text-[#408830]" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
                   Portfolio Tracking
                 </h3>
                 <p className="text-gray-600">
-                  Monitor your investments with real-time updates and detailed
+                  Monitor your investments with real-time feedback and detailed
                   analytics
                 </p>
               </motion.div>
@@ -255,8 +255,8 @@ export default function Home() {
                 variants={fadeIn}
                 whileHover={{ y: -10 }}
               >
-                <div className="w-16 h-16 bg-[#4ADE80]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <PieChart className="w-8 h-8 text-[#4ADE80]" />
+                <div className="w-16 h-16 bg-[#80b048]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <PieChart className="w-8 h-8 text-[#80b048]" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Risk Analysis</h3>
                 <p className="text-gray-600">
@@ -269,8 +269,8 @@ export default function Home() {
                 variants={fadeIn}
                 whileHover={{ y: -10 }}
               >
-                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <BarChart className="w-8 h-8 text-blue-500" />
+                <div className="w-16 h-16 bg-[#509048]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <BarChart className="w-8 h-8 text-[#509048]" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">
                   Trading Simulator

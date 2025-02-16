@@ -91,7 +91,7 @@ export default function About() {
                 <p className="text-sm text-gray-600">Support</p>
               </div>
               <div className="text-center p-4 bg-[#80b048]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#80b048]">50+</p>
+                <p className="text-4xl font-bold text-[#80b048]">5+</p>
                 <p className="text-sm text-gray-600">Trading Tools</p>
               </div>
             </div>
@@ -127,7 +127,7 @@ export default function About() {
               {
                 icon: BookOpen,
                 title: "Educational Resources",
-                description: "Comprehensive guides and webinars",
+                description: "24/7 AI trading assistant",
               },
             ].map((feature, index) => (
               <motion.div
