@@ -15,7 +15,9 @@ import {
   Title,
   Tooltip,
   Legend,
-} from "chart.js";
+} from "chart.js"
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 
 ChartJS.register(
   CategoryScale,
@@ -53,26 +55,11 @@ const portfolioData = {
   ],
 };
 
-// Pseudo data for past trade records
-const pastTradeRecords = [
-  {
-    id: 1,
-    initialInvestment: 8000,
-    finalValue: 9200,
-    stocks: [
-      { name: "TSLA", value: 4000 },
-      { name: "NVDA", value: 3200 },
-      { name: "AMD", value: 2000 },
-    ],
-    valueOverTime: [
-      { date: "2022-09-01", value: 8000 },
-      { date: "2022-10-01", value: 8300 },
-      { date: "2022-11-01", value: 8800 },
-      { date: "2022-12-01", value: 9200 },
-    ],
-  },
-  // Add more past trade records as needed
-];
+interface tradeRecord {
+  initialInvestment: number;
+  finalValue: number;
+  valueOverTime: { date: string; value: number }[];
+}
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -133,7 +120,9 @@ export function Sidebar() {
         fill: true,
       },
     ],
-  };
+  }
+
+  const past = useQuery(api.past.get);
 
   return (
     <motion.div
@@ -142,6 +131,14 @@ export function Sidebar() {
       transition={{ duration: 0.3 }}
       className="relative flex h-full flex-col bg-[#F8F4E3]/50 backdrop-blur-sm border-r border-[#E8D8B2]"
     >
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="absolute -right-3 top-4 z-10 rounded-full bg-[#E8D8B2] p-1 text-gray-800 shadow-lg"
+      >
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+      <div className="flex h-16 items-center justify-center">
+        <h1 className="text-2xl font-bold text-gray-800"></h1>
       <div className="flex items-center justify-center relative h-16">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -203,48 +200,32 @@ export function Sidebar() {
                   <Line data={lineChartData} options={{ responsive: true }} />
                 </div>
                 <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
-                  <h3 className="mb-2 text-lg font-semibold text-gray-800">
-                    Past Trade Records
-                  </h3>
-                  {pastTradeRecords.map((record, index) => (
-                    <div key={record.id} className="mb-4">
-                      <h4 className="text-md font-semibold text-gray-700">
-                        Trade {index + 1}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        Performance:{" "}
-                        {(
-                          ((record.finalValue - record.initialInvestment) /
-                            record.initialInvestment) *
-                          100
-                        ).toFixed(2)}
-                        %
-                      </p>
-                      <div className="mt-2 h-24">
-                        <Line
-                          data={{
-                            labels: record.valueOverTime.map(
-                              (data) => data.date
-                            ),
-                            datasets: [
-                              {
-                                label: "Value",
-                                data: record.valueOverTime.map(
-                                  (data) => data.value
-                                ),
-                                borderColor: "rgb(34, 197, 94)",
-                                backgroundColor: "rgba(34, 197, 94, 0.1)",
-                                tension: 0.1,
-                                fill: true,
-                              },
-                            ],
-                          }}
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                          }}
-                        />
-                      </div>
+                  <h3 className="mb-2 text-lg font-semibold text-gray-800">Past Trade Records</h3>
+                  {past?.map((record: tradeRecord, index: number) => (
+                    <div key={record.initialInvestment} className="mb-4">
+                      <h4 className="text-md font-semibold text-gray-700">Trade {index + 1}</h4>
+                        <p className="text-sm text-gray-600">
+                          Performance:{" "}
+                          {(((record.finalValue - record.initialInvestment) / record.initialInvestment) * 100).toFixed(2)}%
+                        </p>
+                        <div className="mt-2 h-24">
+                          <Line
+                            data={{
+                              labels: record.valueOverTime.map((data) => data.date), // Assuming date format is in the stored records
+                              datasets: [
+                                {
+                                  label: "Value",
+                                  data: record.valueOverTime.map((data) => data.value),
+                                  borderColor: "rgb(34, 197, 94)",
+                                  backgroundColor: "rgba(34, 197, 94, 0.1)",
+                                  tension: 0.1,
+                                  fill: true,
+                                },
+                              ],
+                            }}
+                            options={{ responsive: true, maintainAspectRatio: false }}
+                          />
+                        </div>
                     </div>
                   ))}
                 </div>
