@@ -30,8 +30,9 @@ import {
   TableRow,
   TableCell
 } from "@/components/ui/table"
+import { ChevronRight, FastForward, Calendar } from "heroicons-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
-import Chatbot from "./Chatbot"
+import Chatbot from "./chatbot"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {

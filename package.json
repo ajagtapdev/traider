@@ -27,6 +27,7 @@
     "convex": "^1.19.2",
     "fastapi": "^0.0.8",
     "framer-motion": "^12.4.3",
+    "heroicons-react": "^1.4.1",
     "lucide-react": "^0.475.0",
     "next": "^15.1.7",
     "openai": "^4.85.1",
