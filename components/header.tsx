@@ -36,7 +36,10 @@ const Header = () => {
                 />
               </div>
               <span className="text-2xl font-bold text-gray-800 relative">
-                traider
+                tr
+                <span className="text-[#509048]">a</span>
+                <span className="text-[#509048]">i</span>
+                der
                 <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-[#408830] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
               </span>
             </Link>

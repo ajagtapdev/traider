@@ -2,6 +2,13 @@ import requests
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+<<<<<<< HEAD
+=======
+import FastAPI
+from pydantic import BaseModel
+from typing import List
+
+>>>>>>> simulator
 
 # Load environment variables from .env.local
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../.env.local"))
@@ -56,6 +63,7 @@ def summarize_news_with_nvidia(news_list):
     combined_text = " ".join(news_list)
     
     prompt = (
+<<<<<<< HEAD
     "Summarize the following stock news into 2-4 concise bullet points. "
     "Focus solely on external conditions, events, and market sentiments that could have influenced the company during this time period. "
     "Ensure all points are relevant to the stock's context, but do not include any direct numerical data or mention that the stock price went up or down. "
@@ -64,6 +72,15 @@ def summarize_news_with_nvidia(news_list):
     f"News: {combined_text}"
     )
 
+=======
+        "Summarize the following stock news into 2-4 concise bullet points. "
+        "Focus solely on external conditions, events, and market sentiments that could have influenced the company during this time period. "
+        "Ensure all points are relevant to the stock's context, but do not include any direct numerical data or mention that the stock price went up or down. "
+        "Avoid making any direct predictions about the stock's performance. "
+        "Return only the bullet points and nothing else. "
+        f"News: {combined_text}"
+    )
+>>>>>>> simulator
     
     completion = client.chat.completions.create(
         model="meta/llama-3.3-70b-instruct",
@@ -71,11 +88,15 @@ def summarize_news_with_nvidia(news_list):
         temperature=0.2,
         max_tokens=300
     )
+<<<<<<< HEAD
 
+=======
+>>>>>>> simulator
     summary_text = completion.choices[0].message.content
     # Remove any empty strings from the split
     return [line.strip() for line in summary_text.split("\n") if line.strip()]
 
+<<<<<<< HEAD
 
 # Example Usage
 date = "2024-06-01"
@@ -88,3 +109,22 @@ else:
     bullet_points = summarize_news_with_nvidia(news_results)
     for point in bullet_points:
         print(point)
+=======
+app = FastAPI()
+
+class StockNewsRequest(BaseModel):
+    ticker: str
+    date: str
+
+@app.get("/get_stock_news", response_model=List[str])
+async def get_stock_news_route(ticker: str, date: str):
+    """
+    Endpoint to fetch stock news based on ticker and date, and return summarized points.
+    """
+    news_results = get_stock_news(ticker, date)
+    if not news_results:
+        return ["No news articles found"]
+
+    bullet_points = summarize_news_with_nvidia(news_results)
+    return bullet_points
+>>>>>>> simulator
