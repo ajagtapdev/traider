@@ -3,7 +3,12 @@
 import { Sidebar } from "@/components/sidebar";
 import Header from "@/components/header";
 import TradingSimulator from "@/components/trading-simulator";
+<<<<<<< HEAD
 
+=======
+// import { useQuery } from "convex/react";
+// import { api } from "../../convex/_generated/api";
+>>>>>>> simulator
 
 const Simulator = () => {
   return (
