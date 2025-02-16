@@ -10,6 +10,11 @@ interface tradeRecord {
 export const get = query({
   args: {},
   handler: async (ctx): Promise<tradeRecord[]> => {
-    return await ctx.db.query("past").collect();
+    const results = await ctx.db.query("users").collect() as unknown as tradeRecord[];
+    return results.map(record => ({
+      initialInvestment: record.initialInvestment || 0,
+      finalValue: record.finalValue || 0,
+      valueOverTime: record.valueOverTime || []
+    }));
   },
 });

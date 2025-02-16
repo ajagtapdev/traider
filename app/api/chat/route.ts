@@ -1,140 +1,78 @@
-import OpenAI from "openai";
-import { Trade, Holding } from "@shared/schema";
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-const openai = new OpenAI();
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY,
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+});
 
-interface AIFeedback {
-  feedback: string[];
-  confidence: number;
-  recommendations: string[];
-}
+const systemMessage = `You are an expert financial analyst with decades of experience in global markets, economic trends, and investment strategies. Your knowledge spans across various sectors including technology, healthcare, energy, and finance. You have a keen ability to analyze complex financial data, identify market trends, and provide actionable insights. Your advice is sought after by top executives and investors worldwide. In your responses, please:
 
-interface TradeAnalysis {
-  trade: Trade;
-  priceAtTime: number;
-  currentPrice: number;
-  percentageChange: number;
-  holdingDuration: number;
-}
+1. Provide a comprehensive analysis of the given financial situation or query.
+2. Use relevant financial metrics and ratios when applicable.
+3. Consider both short-term and long-term implications.
+4. Discuss potential risks and opportunities.
+5. Offer data-driven recommendations or strategies when appropriate.
+6. Use industry-specific terminology, but explain complex concepts when necessary.
+7. Cite recent market events or economic indicators that may impact the analysis.
+8. Maintain a balanced and objective viewpoint, considering multiple perspectives.
 
-// Helper function to generate structured analysis prompts
-function generateAnalysisPrompt(tradeAnalysis: TradeAnalysis[], holdings: Holding[]) {
-  // Calculate portfolio metrics
-  const totalPortfolioValue = holdings.reduce((sum, h) => sum + (h.quantity * h.currentPrice), 0);
-  const positionSizes = holdings.map(h => ({
-    symbol: h.symbol,
-    percentage: ((h.quantity * h.currentPrice) / totalPortfolioValue) * 100
-  }));
+Please tailor your response to the specific query or situation presented, and provide insights that would be valuable to a sophisticated financial audience.`;
 
-  return [
-    {
-      role: "system",
-      content: `You are an expert quantitative trading analyst with deep expertise in:
-      - Technical analysis and market timing
-      - Risk management and position sizing
-      - Portfolio optimization and diversification
-      - Trading psychology and behavioral patterns
-      
-      Analyze trading decisions using these principles:
-      1. Compare entry/exit points against major market indicators
-      2. Evaluate position sizing relative to total portfolio value
-      3. Assess diversification across sectors and asset classes
-      4. Identify patterns in trading behavior and emotional decisions
-      5. Calculate risk-adjusted returns and Sharpe ratios where applicable
-      
-      Provide specific, data-driven feedback with numerical support.
-      Focus on actionable insights rather than general advice.
-      Consider both individual trade performance and portfolio-level impacts.`
-    },
-    {
-      role: "user",
-      content: `Perform a comprehensive trading analysis using this data:
-
-      Portfolio Metrics:
-      Total Portfolio Value: $${totalPortfolioValue.toFixed(2)}
-      Position Sizes: ${JSON.stringify(positionSizes, null, 2)}
-      
-      Trade History Analysis:
-      ${JSON.stringify(tradeAnalysis.map(t => ({
-        ...t,
-        roi: ((t.currentPrice - t.priceAtTime) / t.priceAtTime * 100).toFixed(2) + '%',
-        holdingPeriod: t.holdingDuration + ' days'
-      })), null, 2)}
-
-      Current Holdings:
-      ${JSON.stringify(holdings.map(h => ({
-        symbol: h.symbol,
-        quantity: h.quantity,
-        currentValue: (h.quantity * h.currentPrice).toFixed(2),
-        percentOfPortfolio: ((h.quantity * h.currentPrice) / totalPortfolioValue * 100).toFixed(2) + '%'
-      })), null, 2)}
-
-      Analyze:
-      1. Trade timing effectiveness (entry/exit points)
-      2. Position sizing strategy
-      3. Risk management practices
-      4. Portfolio diversification
-      5. Overall trading patterns
-
-      Required JSON Response Format:
-      {
-        "feedback": [
-          "Specific observation with numerical support",
-          "Pattern identification with concrete examples",
-          "Risk analysis with metrics"
-        ],
-        "confidence": "Number between 0-1 based on data quality",
-        "recommendations": [
-          "Actionable step with specific criteria",
-          "Risk management adjustment with target numbers",
-          "Portfolio rebalancing suggestion with percentages"
-        ]
-      }`
-    }
-  ];
-}
-
-export async function analyzeTrades(trades: Trade[], holdings: Holding[]): Promise<AIFeedback> {
+export async function POST(request: Request) {
   try {
-    // Enhanced trade analysis with additional metrics
-    const tradeAnalysis: TradeAnalysis[] = trades.map(trade => {
-      const currentHolding = holdings.find(h => h.symbol === trade.symbol);
-      const currentPrice = currentHolding?.currentPrice || trade.price;
-      const holdingDuration = Math.floor((Date.now() - new Date(trade.timestamp).getTime()) / (1000 * 60 * 60 * 24));
-      
-      return {
-        trade,
-        priceAtTime: trade.price,
-        currentPrice,
-        percentageChange: ((currentPrice - trade.price) / trade.price) * 100,
-        holdingDuration
-      };
+    const body = await request.json();
+    const { messages } = body;
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid messages in request body.' },
+        { status: 400 }
+      );
+    }
+
+    // Filter out any messages with empty content
+    const filteredMessages = messages.filter(
+      (msg: { role: string; content: string }) => msg.content.trim().length > 0
+    );
+
+    // Prepend the system message
+    const allMessages = [{ role: 'system', content: systemMessage }, ...filteredMessages];
+
+    // Request a streaming completion from the OpenAI-compatible API
+    const completion = await openai.chat.completions.create({
+      model: 'meta/llama-3.3-70b-instruct',
+      messages: allMessages,
+      temperature: 0.2,
+      top_p: 0.7,
+      max_tokens: 1024,
+      stream: true,
     });
 
-    const response = await openai.chat.completions.create({
-      model: "nvidia/llama-3.1-nemotron-70b-instruct",
-      messages: generateAnalysisPrompt(tradeAnalysis, holdings),
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-      max_tokens: 1024
+    // Create a ReadableStream to send back Server-Sent Events (SSE)
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of completion) {
+          const delta = chunk.choices?.[0]?.delta?.content;
+          if (delta) {
+            const sseFormatted = `data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseFormatted));
+          }
+        }
+        controller.close();
+      },
     });
 
-    const result = response.choices[0].message.content
-      ? JSON.parse(response.choices[0].message.content)
-      : { feedback: [], confidence: 0, recommendations: [] };
-
-    // Validate and normalize response
-    return {
-      feedback: result.feedback?.map(f => f.trim()) || [],
-      confidence: Math.max(0, Math.min(1, result.confidence || 0)),
-      recommendations: result.recommendations?.map(r => r.trim()) || []
-    };
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+      },
+    });
   } catch (error) {
-    console.error('Error analyzing trades:', error);
-    return {
-      feedback: ['Unable to analyze trades due to technical issues.'],
-      confidence: 0,
-      recommendations: ['Please try again later or contact support if the issue persists.']
-    };
+    console.error('Error generating financial analysis:', error);
+    return NextResponse.json(
+      { error: 'Error generating financial analysis.' },
+      { status: 500 }
+    );
   }
 }
