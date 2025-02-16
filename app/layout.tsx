@@ -8,8 +8,8 @@ import { ConvexClientProvider } from "./ConvexClientProvider";
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Cream Aesthetic Trading Dashboard",
-  description: "A modern, cream-themed trading dashboard with semi-transparent elements",
+  title: "traider",
+  description: "learn your trades with AI",
 }
 
 export default function RootLayout({
