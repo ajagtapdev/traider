@@ -30,21 +30,9 @@ import {
   TableRow,
   TableCell
 } from "@/components/ui/table"
-import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
-import { Calendar, DollarSign, FastForward } from "lucide-react"
-import TradeHistoryTable from "./table"
+import { Calendar, ChevronRight, FastForward } from "lucide-react"
 
-// Register Chart.js
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-)
 
 /** Number of days to look back for the stock price chart. */
 
