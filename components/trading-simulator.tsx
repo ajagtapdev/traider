@@ -771,7 +771,7 @@ export default function TradingSimulator() {
         <div className="w-full md:w-1/3">
           <Card className="bg-white shadow-lg">
             <CardHeader>
-              <CardTitle className="text-[#408830]">AI Financial Analyst</CardTitle>
+              <CardTitle className="text-[#408830]">AI  Financial Analyst</CardTitle>
             </CardHeader>
             <CardContent>
               <div
