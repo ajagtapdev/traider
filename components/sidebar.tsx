@@ -17,8 +17,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js"
-import { useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
+// import { useQuery } from "convex/react";
+// import { api } from "../convex/_generated/api";
 
 ChartJS.register(
   CategoryScale,
@@ -58,13 +58,13 @@ const portfolioData = {
   ],
 };
 
-interface tradeRecord {
-  initialInvestment: number;
-  finalValue: number;
-  valueOverTime: { date: string; value: number }[];
-}
+// interface tradeRecord {
+//   initialInvestment: number;
+//   finalValue: number;
+//   valueOverTime: { date: string; value: number }[];
+// }
 
-interface t
+
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -132,7 +132,7 @@ export function Sidebar() {
   }
 
   // const past = useQuery(api.past.get);
-  const trade  = useQuery(api.trade.getTrades, { userId: "1" });
+  // const trade  = useQuery(api.trade.getTrades, { userId: "1" });
 
   return (
     <motion.div
@@ -214,7 +214,7 @@ export function Sidebar() {
                 </div>
                 <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">Past Trade Records</h3>
-                  {past?.map((record: tradeRecord, index: number) => (
+                  {/* {past?.map((record: tradeRecord, index: number) => (
                     <div key={record.initialInvestment} className="mb-4">
                       <h4 className="text-md font-semibold text-gray-700">Trade {index + 1}</h4>
                         <p className="text-sm text-gray-600">
@@ -240,7 +240,7 @@ export function Sidebar() {
                           />
                         </div>
                     </div>
-                  ))}
+                  ))} */}
                 </div>
               </div>
             </div>
