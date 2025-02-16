@@ -8,7 +8,7 @@ import TradingSimulator from "@/components/trading-simulator";
 
 const Simulator = () => {
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#F8F4E3] to-[#E8E1C8]">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#fdf6e9] to-[#fdf6e9]">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
