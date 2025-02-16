@@ -350,7 +350,7 @@ export default function TradingSimulator() {
 
       {/* Setup Modal */}
       <Dialog open={showSetup} onOpenChange={setShowSetup}>
-        <DialogContent className="bg-[#80b048] text-black rounded-xl">
+        <DialogContent className="bg-[#fdf6e9] text-black rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold mb-4">
               Setup Simulation
@@ -568,8 +568,11 @@ export default function TradingSimulator() {
         </ResponsiveContainer>
       </div>
 
+      {/* Market Contexts*/}
+      < Contexts />
+
       {/* Place Trade + Trading Coach (no AI chatbot) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {/* Place Trade */}
         <Card className="bg-white shadow-lg">
           <CardHeader>
