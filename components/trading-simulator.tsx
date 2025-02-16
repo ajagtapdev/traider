@@ -183,7 +183,7 @@ export default function TradingSimulator() {
     let d = new Date(startDate)
     while (d <= currentDate) {
       const ds = fmt(d)
-      const val = computePortfolioValue(ds)
+      const val = computePortfolioValue(ds)       
       hist.push({ date: ds, value: val })
       d = addDays(d, 1)
     }

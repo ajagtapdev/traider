@@ -3,7 +3,6 @@
 import { Sidebar } from "@/components/sidebar";
 import Header from "@/components/header";
 import TradingSimulator from "@/components/trading-simulator";
-import ChatBot from "@/components/chatbot";
 
 
 const Simulator = () => {
@@ -14,7 +13,6 @@ const Simulator = () => {
         <Header />
         <main className="flex-1 overflow-y-auto p-6">
           <TradingSimulator />
-          <ChatBot />
         </main>
       </div>
     </div>
