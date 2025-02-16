@@ -102,7 +102,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <p className="text-gray-600 text-sm">
-              © {new Date().getFullYear()} TradePro. All rights reserved.
+              © {new Date().getFullYear()} traider. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link href="/terms" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
