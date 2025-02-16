@@ -18,6 +18,15 @@ const schema = defineSchema({
       })
     ),
   }).index("by_user", ["userId"]),
+
+  trade: defineTable({
+    userId: v.id("users"),
+    date: v.string(),
+    ticker: v.string(),
+    quantity: v.number(),
+    price: v.number(),
+    action: v.string()
+  })
 });
 
 export default schema;

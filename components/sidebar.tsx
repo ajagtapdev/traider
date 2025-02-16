@@ -120,7 +120,7 @@ export function Sidebar() {
   // const past = useQuery(api.past.get);
   const simulation = useFetchSimulation();
 
-  if (!simulation) return <p>Loading...</p>;
+  // if (!simulation) return <p>Loading...</p>;
 
   return (
     <motion.div
