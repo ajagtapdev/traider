@@ -56,7 +56,7 @@ export default function About() {
               Our Mission
             </h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              At traider, we're on a mission to democratize trading by
+              At traider, we&apos;re on a mission to democratize trading by
               providing professional-grade tools and education to traders of all
               experience levels. We believe that with the right resources and
               knowledge, anyone can become a successful trader.
@@ -153,10 +153,10 @@ export default function About() {
             Our Commitment to You
           </h2>
           <p className="text-gray-600 mb-6 text-center max-w-3xl mx-auto leading-relaxed">
-            At traider, we're committed to your success. Our platform is
+            At traider, we&apos;re committed to your success. Our platform is
             designed to grow with you, providing the tools and insights you need
             at every stage of your trading journey. From beginners to seasoned
-            professionals, we're here to help you achieve your financial goals.
+            professionals, we&apos;re here to help you achieve your financial goals.
           </p>
           <div className="flex justify-center">
             <Link href="/">
