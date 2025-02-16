@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import {
   CartesianGrid,
@@ -17,10 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  RadioGroup,
-  RadioGroupItem
-} from "@/components/ui/radio-group"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Table,
   TableBody,
@@ -31,8 +28,8 @@ import {
 } from "@/components/ui/table"
 import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
-import Chatbot from "./chatbot"
 import Contexts from "./Contexts"
+// Removed: import Chatbot from "./chatbot"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -80,7 +77,7 @@ export default function TradingSimulator() {
   // 1) Setup Simulation Modal
   // --------------------------------------
   const [showSetup, setShowSetup] = useState(true)
-  const [tempStartDate, setTempStartDate] = useState("2000-01-01")
+  const [tempStartDate, setTempStartDate] = useState("2010-01-01")
   const [tempDuration, setTempDuration] = useState(6)
   const [tempCapital, setTempCapital] = useState(10000)
   const [errorMsg, setErrorMsg] = useState("")
@@ -105,7 +102,7 @@ export default function TradingSimulator() {
   // --------------------------------------
   // 2) Core Sim State
   // --------------------------------------
-  const [startDate, setStartDate] = useState(new Date("2000-01-01"))
+  const [startDate, setStartDate] = useState(new Date("2010-01-01"))
   const [simulationDurationMonths, setSimulationDurationMonths] = useState(6)
   const [startingCapital, setStartingCapital] = useState(10000)
 
@@ -168,7 +165,6 @@ export default function TradingSimulator() {
     fetchData()
   }, [chartTicker, currentDate, timeWindow, showSetup])
 
-
   // -------------------------------------------
   // 4) Rebuild the daily portfolio from start->current
   //    whenever "currentDate" or "trades" changes
@@ -177,7 +173,6 @@ export default function TradingSimulator() {
   useEffect(() => {
     buildPortfolioHistory()
   }, [currentDate, trades, stockData])
-
 
   /**
    * Return the "last known price" for chartTicker on a given date string
@@ -189,7 +184,6 @@ export default function TradingSimulator() {
     if (!relevant.length) return 0
     return relevant[relevant.length - 1].price
   }
-
 
   /**
    * For all trades on/before `dateStr`, compute how many shares we own
@@ -214,7 +208,6 @@ export default function TradingSimulator() {
     const leftoverCash = startingCapital - netSpent
     return { shares, leftoverCash }
   }
-
 
   /**
    * Build a daily portfolio array from the startDate up to currentDate,
@@ -300,7 +293,7 @@ export default function TradingSimulator() {
   }
 
   // --------------------------------------
-  // 7) Recharts
+  // 7) Recharts Tooltips
   // --------------------------------------
   // Portfolio tooltip
   const portfolioTooltipContent = (data: any) => {
@@ -333,6 +326,99 @@ export default function TradingSimulator() {
       </div>
     )
   }
+
+  // --------------------------------------
+  // 8) Inline Chatbot State & Functions
+  // --------------------------------------
+  type Message = { role: "user" | "assistant"; content: string }
+  const [chatInput, setChatInput] = useState("")
+  const [chatLog, setChatLog] = useState<Message[]>([])
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const lastAnalyzedTradeRef = useRef<string>("")
+
+  const sendPrompt = async (prompt: string) => {
+    const userMessage: Message = { role: "user", content: prompt }
+    setChatLog((prev) => [...prev, userMessage])
+    setChatLoading(true)
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [userMessage] }),
+      })
+      if (!response.ok) {
+        console.error("Error:", response.statusText)
+        setChatLoading(false)
+        return
+      }
+      const reader = response.body?.getReader()
+      if (!reader) {
+        console.error("No reader available.")
+        setChatLoading(false)
+        return
+      }
+      const decoder = new TextDecoder()
+      let assistantMessage = ""
+      // Append an empty assistant message to be updated in real time
+      setChatLog((prev) => [...prev, { role: "assistant", content: "" }])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        const events = chunk.split("\n\n")
+        for (const event of events) {
+          if (event.startsWith("data: ")) {
+            const dataStr = event.replace("data: ", "").trim()
+            if (dataStr === "[DONE]") break
+            try {
+              const parsed = JSON.parse(dataStr)
+              const delta = parsed.choices?.[0]?.delta?.content
+              if (delta) {
+                assistantMessage += delta
+                setChatLog((prev) => {
+                  const updated = [...prev]
+                  updated[updated.length - 1] = { role: "assistant", content: assistantMessage }
+                  return updated
+                })
+                chatContainerRef.current?.scrollTo({
+                  top: chatContainerRef.current.scrollHeight,
+                  behavior: "smooth",
+                })
+              }
+            } catch (error) {
+              console.error("Error parsing SSE data:", error)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error)
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  const handleSend = async () => {
+    if (!chatInput.trim()) return
+    await sendPrompt(chatInput.trim())
+    setChatInput("")
+  }
+
+  // Automatically analyze a new trade if one is provided
+  const newTrade = trades.length ? trades[trades.length - 1] : undefined
+  useEffect(() => {
+    if (newTrade && newTrade.date !== lastAnalyzedTradeRef.current) {
+      const tradeValue = newTrade.price * newTrade.quantity
+      const prompt = `Analyze the following trade: ${newTrade.action} ${newTrade.quantity} shares of ${newTrade.ticker} at $${newTrade.price.toFixed(
+        2
+      )} per share (total value $${tradeValue.toFixed(2)}). Provide a positive or neutral outlook.`
+      sendPrompt(prompt)
+      lastAnalyzedTradeRef.current = newTrade.date
+    }
+  }, [newTrade])
 
   // --------------------------------------
   // RENDER
@@ -397,7 +483,7 @@ export default function TradingSimulator() {
         </DialogContent>
       </Dialog>
 
-      {/* Row 1: Starting Capital / Current Cash + Start/End/Duration */}
+      {/* Row 1: Portfolio Overview & Simulation Period */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Portfolio Overview */}
         <Card className="bg-white shadow-lg">
@@ -486,7 +572,7 @@ export default function TradingSimulator() {
         </CardContent>
       </Card>
 
-      {/* 1) Portfolio Value chart (top) */}
+      {/* 1) Portfolio Value Chart */}
       <div className="w-full bg-white rounded-md shadow-sm mb-6 p-4">
         <h3 className="text-[#408830] font-semibold mb-2">Portfolio Value</h3>
         <ResponsiveContainer width="90%" height={350}>
@@ -501,15 +587,15 @@ export default function TradingSimulator() {
                 (dataMin: number) => Math.floor(dataMin / 100) * 100 - 50,
                 (dataMax: number) => Math.ceil(dataMax / 100) * 100 + 50,
               ]}
-              tickFormatter={(val: number) => `${Math.round(val / 100) * 100}`} // Ensure it returns a string
+              tickFormatter={(val: number) => `${Math.round(val / 100) * 100}`}
               label={{
                 value: "Portfolio Value",
                 angle: -90,
                 position: "insideLeft",
-                offset: -20, // Move Y-axis label farther left
+                offset: -20,
                 style: { textAnchor: "middle" },
               }}
-              tick={{ dx: 10, dy: 5 }} // Add extra spacing for readability
+              tick={{ dx: 10, dy: 5 }}
             />
             <Tooltip content={portfolioTooltipContent} />
             <Line type="monotone" dataKey="value" stroke="#509048" strokeWidth={2} />
@@ -517,10 +603,9 @@ export default function TradingSimulator() {
         </ResponsiveContainer>
       </div>
 
-      {/* 2) Stock Price chart (bottom) */}
+      {/* 2) Stock Price Chart */}
       <div className="w-full bg-white rounded-md shadow-sm mb-6 p-4">
         <h3 className="text-[#408830] font-semibold mb-2">Stock Price</h3>
-        {/* Single row: half for Ticker, half for Time Window */}
         <div className="flex flex-wrap mb-4 gap-4">
           <div className="w-full md:w-2/5">
             <Label>Chart Ticker</Label>
@@ -546,7 +631,7 @@ export default function TradingSimulator() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              tickFormatter={(val) => val.split("T")[0]} // Format date to "YYYY-MM-DD"
+              tickFormatter={(val) => val.split("T")[0]}
               label={{
                 value: "Date",
                 position: "insideBottom",
@@ -568,128 +653,159 @@ export default function TradingSimulator() {
         </ResponsiveContainer>
       </div>
 
-
-      {/* Place Trade + Trading Coach (no AI chatbot) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        {/* Place Trade */}
-        <Card className="bg-white shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-[#408830]">Place Trade</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {/* Ticker read only */}
-              <div>
-                <Label>Stock Ticker</Label>
-                <Input readOnly value={chartTicker} className="bg-[#fdf6e9]" />
-                <p className="text-sm text-gray-600 mt-1">
-                  Current Price: $
-                  {getPriceForDate(fmt(currentDate)).toFixed(2)}
-                </p>
-              </div>
-
-              {/* Date read only */}
-              <div>
-                <Label>Trade Date</Label>
-                <Input readOnly value={fmt(currentDate)} className="bg-[#fdf6e9]" />
-              </div>
-
-              {/* Buy / Sell */}
-              <div>
-                <Label>Action</Label>
-                <RadioGroup
-                  className="flex items-center space-x-4"
-                  defaultValue={tradeAction}
-                  onValueChange={(val) => setTradeAction(val as "buy" | "sell")}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="buy" id="radioBuy" />
-                    <Label htmlFor="radioBuy">Buy</Label>
+      {/* Trade Data + Chat UI Side by Side */}
+      <div className="flex flex-col md:flex-row gap-6 mt-6">
+        <div className="flex-1">
+          {/* Place Trade + Trading Coach */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Place Trade */}
+            <Card className="bg-white shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-[#408830]">Place Trade</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Ticker read only */}
+                  <div>
+                    <Label>Stock Ticker</Label>
+                    <Input readOnly value={chartTicker} className="bg-[#fdf6e9]" />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Current Price: ${getPriceForDate(fmt(currentDate)).toFixed(2)}
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="sell" id="radioSell" />
-                    <Label htmlFor="radioSell">Sell</Label>
-                  </div>
-                </RadioGroup>
-              </div>
 
-              {/* Quantity + total value */}
-              <div>
-                <Label>Quantity</Label>
+                  {/* Date read only */}
+                  <div>
+                    <Label>Trade Date</Label>
+                    <Input readOnly value={fmt(currentDate)} className="bg-[#fdf6e9]" />
+                  </div>
+
+                  {/* Buy / Sell */}
+                  <div>
+                    <Label>Action</Label>
+                    <RadioGroup
+                      className="flex items-center space-x-4"
+                      defaultValue={tradeAction}
+                      onValueChange={(val) => setTradeAction(val as "buy" | "sell")}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="buy" id="radioBuy" />
+                        <Label htmlFor="radioBuy">Buy</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="sell" id="radioSell" />
+                        <Label htmlFor="radioSell">Sell</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Quantity + total value */}
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input
+                      type="number"
+                      value={tradeQuantity === 0 ? "" : tradeQuantity}
+                      onChange={(e) => setTradeQuantity(Number(e.target.value) || 0)}
+                    />
+                    <p className="text-sm text-gray-700 mt-1">
+                      Total Value: ${(getPriceForDate(fmt(currentDate)) * tradeQuantity).toFixed(2)}
+                    </p>
+                  </div>
+
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      onClick={handlePlaceTrade}
+                      className="w-full bg-[#408830] hover:bg-[#509048] text-white"
+                    >
+                      Place Trade ($
+                      {(getPriceForDate(fmt(currentDate)) * tradeQuantity).toFixed(2)}
+                      )
+                    </Button>
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Trading Coach */}
+            <Contexts />
+          </div>
+
+          {/* Trade History */}
+          <Card className="bg-white shadow-lg mt-6">
+            <CardHeader>
+              <CardTitle className="text-[#408830]">Trade History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Ticker</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Trade Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trades.map((t, idx) => {
+                    const tv = t.price * t.quantity
+                    return (
+                      <TableRow key={idx}>
+                        <TableCell>{t.date}</TableCell>
+                        <TableCell>{t.action}</TableCell>
+                        <TableCell>{t.ticker}</TableCell>
+                        <TableCell>{t.quantity}</TableCell>
+                        <TableCell>${t.price.toFixed(2)}</TableCell>
+                        <TableCell>${tv.toFixed(2)}</TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Inline Chat UI */}
+        <div className="w-full md:w-1/3">
+          <Card className="bg-white shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-[#408830]">AI Financial Analyst</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div
+                ref={chatContainerRef}
+                className="chat-container p-4 bg-white shadow-lg rounded"
+                style={{ maxHeight: "400px", overflowY: "auto" }}
+              >
+                {chatLog.map((msg, idx) => (
+                  <div key={idx} className={`message ${msg.role} my-2`}>
+                    {msg.content}
+                  </div>
+                ))}
+              </div>
+              <div className="chat-input flex gap-2 mt-4">
                 <Input
-                  type="number"
-                  value={tradeQuantity === 0 ? "" : tradeQuantity}
-                  onChange={(e) => setTradeQuantity(Number(e.target.value) || 0)}
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1"
                 />
-                <p className="text-sm text-gray-700 mt-1">
-                  Total Value: $
-                  {(
-                    getPriceForDate(fmt(currentDate)) * tradeQuantity
-                  ).toFixed(2)}
-                </p>
-              </div>
-
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
-                  onClick={handlePlaceTrade}
-                  className="w-full bg-[#408830] hover:bg-[#509048] text-white"
+                  onClick={handleSend}
+                  disabled={chatLoading}
+                  className="bg-[#408830] text-white px-4 py-2 rounded"
                 >
-                  Place Trade ($
-                  {(
-                    getPriceForDate(fmt(currentDate)) * tradeQuantity
-                  ).toFixed(2)}
-                  )
+                  Send
                 </Button>
-              </motion.div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trading Coach only (no AI chatbot) */}
-        <Contexts />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Trade History */}
-      <Card className="bg-white shadow-lg mt-6">
-        <CardHeader>
-          <CardTitle className="text-[#408830]">Trade History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Ticker</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Trade Value</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trades.map((t, idx) => {
-                const tv = t.price * t.quantity
-                return (
-                  <TableRow key={idx}>
-                    <TableCell>{t.date}</TableCell>
-                    <TableCell>{t.action}</TableCell>
-                    <TableCell>{t.ticker}</TableCell>
-                    <TableCell>{t.quantity}</TableCell>
-                    <TableCell>${t.price.toFixed(2)}</TableCell>
-                    <TableCell>${tv.toFixed(2)}</TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-     {/* AI Chat */}
-    <Chatbot />
-     
-
-    {/* Success Toast */}
+      {/* Success Toast */}
       {showSuccessToast && (
         <div className="fixed right-4 bottom-4 animate-slideInUp">
           <div className="bg-green-600 text-white py-2 px-4 rounded shadow-lg">

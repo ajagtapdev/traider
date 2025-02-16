@@ -42,10 +42,10 @@ const menuItems = [
 // Pseudo data for portfolio visualizations
 const portfolioData = {
   initialInvestment: 10000,
-  currentValue: 12500,
+  currentValue: 2000,
   stocks: [
-    { name: "AAPL", value: 5000 },
-    { name: "GOOGL", value: 3000 },
+    { name: "AAPL", value: 2000 },
+    { name: "GOOGL", value: 1500 },
     { name: "AMZN", value: 2500 },
     { name: "MSFT", value: 2000 },
   ],
@@ -214,33 +214,34 @@ export function Sidebar() {
                 </div>
                 <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">Past Trade Records</h3>
-                  {/* {past?.map((record: tradeRecord, index: number) => (
-                    <div key={record.initialInvestment} className="mb-4">
+                    <details className="mb-4"></details>
+                    {portfolioData.valueOverTime.map((record, index) => (
+                    <div key={index} className="mb-4">
                       <h4 className="text-md font-semibold text-gray-700">Trade {index + 1}</h4>
-                        <p className="text-sm text-gray-600">
-                          Performance:{" "}
-                          {(((record.finalValue - record.initialInvestment) / record.initialInvestment) * 100).toFixed(2)}%
-                        </p>
-                        <div className="mt-2 h-24">
-                          <Line
-                            data={{
-                              labels: record.valueOverTime.map((data) => data.date), // Assuming date format is in the stored records
-                              datasets: [
-                                {
-                                  label: "Value",
-                                  data: record.valueOverTime.map((data) => data.value),
-                                  borderColor: "rgb(34, 197, 94)",
-                                  backgroundColor: "rgba(34, 197, 94, 0.1)",
-                                  tension: 0.1,
-                                  fill: true,
-                                },
-                              ],
-                            }}
-                            options={{ responsive: true, maintainAspectRatio: false }}
-                          />
-                        </div>
+                      <p className="text-sm text-gray-600">
+                        Performance:{" "}
+                        {(((record.value - portfolioData.initialInvestment) / portfolioData.initialInvestment) * 100).toFixed(2)}%
+                      </p>
+                      <div className="mt-2 h-24">
+                        <Line
+                        data={{
+                          labels: portfolioData.valueOverTime.map((data) => data.date),
+                          datasets: [
+                          {
+                            label: "Value",
+                            data: portfolioData.valueOverTime.map((data) => data.value),
+                            borderColor: "rgb(34, 197, 94)",
+                            backgroundColor: "rgba(34, 197, 94, 0.1)",
+                            tension: 0.1,
+                            fill: true,
+                          },
+                          ],
+                        }}
+                        options={{ responsive: true, maintainAspectRatio: false }}
+                        />
+                      </div>
                     </div>
-                  ))} */}
+                    ))}
                 </div>
               </div>
             </div>
