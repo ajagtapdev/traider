@@ -12,26 +12,27 @@ import {
   Tooltip,
   Legend,
   ChartEvent,
-  ActiveElement
+  ActiveElement,
 } from "chart.js"
-import { Calendar, DollarSign, FastForward, TrendingUp, TrendingDown, Save } from "lucide-react"
+import {
+  Calendar,
+  DollarSign,
+  FastForward,
+  TrendingUp,
+  TrendingDown,
+  Save,
+} from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
-
-// Pseudo data generator
-const generatePseudoData = (days: number, startDate: Date, startPrice: number) => {
-  const data = []
-  let price = startPrice
-  for (let i = 0; i < days; i++) {
-    price += (Math.random() - 0.5) * 5
-    data.push({
-      date: new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      price: price.toFixed(2),
-    })
-  }
-  return data
-}
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+)
 
 type Trade = {
   date: string
@@ -43,9 +44,9 @@ type Trade = {
 
 export function TradingSimulator() {
   const [ticker, setTicker] = useState("AAPL")
-  const [startDate, setStartDate] = useState(new Date())
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [duration, setDuration] = useState(1)
+  const [startDate, setStartDate] = useState(new Date("2000-01-01"))
+  const [currentDate, setCurrentDate] = useState(new Date("2000-01-01"))
+  const [timeframe, setTimeframe] = useState(1) // Represents timeframe in months
   const [startingCapital, setStartingCapital] = useState(10000)
   const [capital, setCapital] = useState(startingCapital)
   const [stockData, setStockData] = useState<{ date: string; price: string }[]>([])
@@ -54,11 +55,45 @@ export function TradingSimulator() {
   const [tradeQuantity, setTradeQuantity] = useState(0)
   const [portfolioValue, setPortfolioValue] = useState(0)
 
+  // Reset currentDate whenever startDate or timeframe changes.
   useEffect(() => {
-    const data = generatePseudoData(duration * 30, startDate, 100)
-    setStockData(data)
     setCurrentDate(startDate)
-  }, [startDate, duration])
+  }, [startDate, timeframe])
+
+  // Fetch real stock data from the backend using the current simulation window.
+  useEffect(() => {
+    const fetchRealStockData = async () => {
+      // Compute window start: currentDate minus (timeframe * 30 days)
+      const windowStart = new Date(currentDate.getTime() - timeframe * 30 * 24 * 60 * 60 * 1000)
+      const windowStartStr = windowStart.toISOString().split("T")[0]
+      const currentDateStr = currentDate.toISOString().split("T")[0]
+
+      console.log("Fetching data for ticker:", ticker)
+      console.log("Window start:", windowStartStr, "Current Date:", currentDateStr)
+
+      try {
+        const response = await fetch(
+          `/api/stock-data?ticker=${ticker}&startDate=${windowStartStr}&endDate=${currentDateStr}`
+        )
+        const data = await response.json()
+        console.log("Raw data from API:", data)
+
+        // Filter data so that it only includes dates up to the simulation's currentDate.
+        const filteredData = data.filter((d: { date: string; price: string }) => {
+          // Adjust this comparison if the date format is not exactly "YYYY-MM-DD"
+          return d.date <= currentDateStr
+        })
+        console.log("Filtered data (<= currentDate):", filteredData)
+        setStockData(filteredData)
+      } catch (error) {
+        console.error("Error fetching real stock data:", error)
+      }
+    }
+
+    if (ticker && currentDate) {
+      fetchRealStockData()
+    }
+  }, [ticker, currentDate, timeframe])
 
   const chartData = {
     labels: stockData.map((d) => d.date),
@@ -107,7 +142,12 @@ export function TradingSimulator() {
   }
 
   const handleTrade = (action: "buy" | "sell") => {
-    const currentPrice = Number(stockData.find((d) => d.date === currentDate.toISOString().split("T")[0])?.price || 0)
+    const currentPrice =
+      Number(
+        stockData.find(
+          (d) => d.date === currentDate.toISOString().split("T")[0]
+        )?.price || 0
+      )
     const tradeValue = currentPrice * tradeQuantity
 
     if (action === "buy" && tradeValue > capital) {
@@ -141,14 +181,25 @@ export function TradingSimulator() {
   }
 
   const updatePortfolioValue = () => {
-    const currentPrice = Number(stockData.find((d) => d.date === currentDate.toISOString().split("T")[0])?.price || 0)
+    const currentPrice =
+      Number(
+        stockData.find(
+          (d) => d.date === currentDate.toISOString().split("T")[0]
+        )?.price || 0
+      )
     const stockValue = calculateHoldings() * currentPrice
     setPortfolioValue(capital + stockValue)
   }
 
   const fastForward = (days: number) => {
-    const newDate = new Date(currentDate.getTime() + days * 24 * 60 * 60 * 1000)
-    if (newDate <= new Date(startDate.getTime() + duration * 30 * 24 * 60 * 60 * 1000)) {
+    const newDate = new Date(
+      currentDate.getTime() + days * 24 * 60 * 60 * 1000
+    )
+    // Calculate the simulation end date based on the original start date and timeframe (in months)
+    const simulationEndDate = new Date(
+      startDate.getTime() + timeframe * 30 * 24 * 60 * 60 * 1000
+    )
+    if (newDate <= simulationEndDate) {
       setCurrentDate(newDate)
       updatePortfolioValue()
     } else {
@@ -157,8 +208,6 @@ export function TradingSimulator() {
   }
 
   const saveSimulation = () => {
-    // Here you would typically save the simulation data to your backend
-    // For now, we'll just log it to the console
     console.log("Saving simulation:", {
       startDate,
       endDate: currentDate,
@@ -169,7 +218,7 @@ export function TradingSimulator() {
     })
 
     // Reset the simulator
-    setStartDate(new Date())
+    setStartDate(new Date("2000-01-01"))
     setCurrentDate(new Date())
     setCapital(startingCapital)
     setTrades([])
@@ -180,7 +229,7 @@ export function TradingSimulator() {
   return (
     <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md p-6 mt-6">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Trading Simulator</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
           <div className="relative">
@@ -192,20 +241,6 @@ export function TradingSimulator() {
               className="w-full rounded-md bg-white/50 py-2 pl-10 pr-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
             />
           </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Duration (months)</label>
-          <select
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-            className="w-full rounded-md bg-white/50 py-2 px-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
-          >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-              <option key={month} value={month}>
-                {month}
-              </option>
-            ))}
-          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Starting Capital</label>
@@ -220,8 +255,38 @@ export function TradingSimulator() {
           </div>
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Simulation Duration</label>
+          <select
+            value={timeframe}
+            onChange={(e) => setTimeframe(Number(e.target.value))}
+            className="w-full rounded-md bg-white/50 py-2 px-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Stock Ticker</label>
           <StockTickerDropdown onSelect={(selectedTicker) => setTicker(selectedTicker.symbol)} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Timeframe</label>
+          <select
+            value={timeframe}
+            onChange={(e) => setTimeframe(Number(e.target.value))}
+            className="w-full rounded-md bg-white/50 py-2 px-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+          >
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="relative mb-4">
@@ -291,18 +356,10 @@ export function TradingSimulator() {
             <thead className="bg-[#F8F4E3]">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Ticker
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Quantity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Price
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Action</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ticker</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Quantity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Price</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-[#E8D8B2]">
