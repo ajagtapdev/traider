@@ -32,6 +32,7 @@ import {
 import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
 import Chatbot from "./Chatbot"
+import Contexts from "./Contexts"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -567,8 +568,11 @@ export default function TradingSimulator() {
         </ResponsiveContainer>
       </div>
 
+      {/* Market Contexts*/}
+      < Contexts />
+
       {/* Place Trade + Trading Coach (no AI chatbot) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {/* Place Trade */}
         <Card className="bg-white shadow-lg">
           <CardHeader>
