@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table"
 import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
+import Chatbot from "./Chatbot"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -166,32 +167,39 @@ export default function TradingSimulator() {
     fetchData()
   }, [chartTicker, currentDate, timeWindow, showSetup])
 
-  // --------------------------------------
-  // 4) Rebuild the Portfolio Value daily
-  // --------------------------------------
-  useEffect(() => {
-    if (showSetup) return
-    buildPortfolioHistory()
-  }, [currentDate, trades, stockData, showSetup])
 
-  function buildPortfolioHistory() {
-    const hist: { date: string; value: number }[] = []
-    let d = new Date(startDate)
-    while (d <= currentDate) {
-      const ds = fmt(d)
-      const val = computePortfolioValue(ds)
-      hist.push({ date: ds, value: val })
-      d = addDays(d, 1)
-    }
-    setPortfolioHistory(hist)
+  // -------------------------------------------
+  // 4) Rebuild the daily portfolio from start->current
+  //    whenever "currentDate" or "trades" changes
+  // -------------------------------------------
+
+  useEffect(() => {
+    buildPortfolioHistory()
+  }, [currentDate, trades, stockData])
+
+
+  /**
+   * Return the "last known price" for chartTicker on a given date string
+   * using the fetched stockData. If none found, returns 0.
+   */
+  function getPriceForDate(dateStr: string) {
+    // Filter for rows <= that date
+    const relevant = stockData.filter((row) => row.date <= dateStr)
+    if (!relevant.length) return 0
+    return relevant[relevant.length - 1].price
   }
 
-  // For a given day, leftover + shares * price
-  function computePortfolioValue(dateStr: string): number {
-    let netSpent = 0
+
+  /**
+   * For all trades on/before `dateStr`, compute how many shares we own
+   * and how much net capital is left from the startingCapital.
+   */
+  function computePositionAndCapital(dateStr: string) {
     let shares = 0
+    let netSpent = 0
+    // Sum up all trades that occurred on or before dateStr
     for (const t of trades) {
-      if (t.ticker === chartTicker && t.date <= dateStr) {
+      if (t.date <= dateStr && t.ticker === chartTicker) {
         const cost = t.price * t.quantity
         if (t.action === "buy") {
           shares += t.quantity
@@ -202,26 +210,30 @@ export default function TradingSimulator() {
         }
       }
     }
-    const leftover = startingCapital - netSpent
-    const p = getPriceForDate(dateStr)
-    return leftover + p * shares
+    const leftoverCash = startingCapital - netSpent
+    return { shares, leftoverCash }
   }
 
-  function getPriceForDate(dateStr: string) {
-    const relevant = stockData.filter((s) => s.date <= dateStr)
-    if (!relevant.length) return 0
-    return relevant[relevant.length - 1].price
-  }
 
-  function getCurrentCash() {
-    let netSpent = 0
-    for (const t of trades) {
-      if (t.ticker === chartTicker && t.date <= fmt(currentDate)) {
-        const c = t.price * t.quantity
-        netSpent += t.action === "buy" ? c : -c
-      }
+  /**
+   * Build a daily portfolio array from the startDate up to currentDate,
+   * using the stock's daily price & trades that happened on each day.
+   */
+  function buildPortfolioHistory() {
+    const history: { date: string; value: number }[] = []
+    let d = new Date(startDate.getTime())
+
+    // Loop day by day up to currentDate
+    while (d <= currentDate) {
+      const ds = fmt(d) // 'YYYY-MM-DD'
+      const { shares, leftoverCash } = computePositionAndCapital(ds)
+      const price = getPriceForDate(ds)
+      const dailyValue = leftoverCash + shares * price
+      history.push({ date: ds, value: dailyValue })
+
+      d = addDays(d, 1)
     }
-    return startingCapital - netSpent
+    setPortfolioHistory(history)
   }
 
   // --------------------------------------
@@ -402,7 +414,7 @@ export default function TradingSimulator() {
               <div>
                 <p className="text-sm text-gray-500">Current Cash</p>
                 <p className="text-2xl font-bold text-[#509048]">
-                  ${getCurrentCash().toLocaleString()}
+                  ${computePositionAndCapital(fmt(currentDate)).leftoverCash.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -476,26 +488,27 @@ export default function TradingSimulator() {
       {/* 1) Portfolio Value chart (top) */}
       <div className="w-full bg-white rounded-md shadow-sm mb-6 p-4">
         <h3 className="text-[#408830] font-semibold mb-2">Portfolio Value</h3>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={portfolioHistory}>
+        <ResponsiveContainer width="90%" height={350}>
+          <LineChart data={portfolioHistory} margin={{ left: 50, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              tickFormatter={(val) => val} // "YYYY-MM-DD" only
-              label={{
-                value: "Date",
-                position: "insideBottom",
-                offset: -5,
-                style: { textAnchor: "middle" },
-              }}
+              tickFormatter={(val) => String(val)}
             />
             <YAxis
+              domain={[
+                (dataMin: number) => Math.floor(dataMin / 100) * 100 - 50,
+                (dataMax: number) => Math.ceil(dataMax / 100) * 100 + 50,
+              ]}
+              tickFormatter={(val: number) => `${Math.round(val / 100) * 100}`} // Ensure it returns a string
               label={{
                 value: "Portfolio Value",
                 angle: -90,
                 position: "insideLeft",
+                offset: -20, // Move Y-axis label farther left
                 style: { textAnchor: "middle" },
               }}
+              tick={{ dx: 10, dy: 5 }} // Add extra spacing for readability
             />
             <Tooltip content={portfolioTooltipContent} />
             <Line type="monotone" dataKey="value" stroke="#509048" strokeWidth={2} />
@@ -508,11 +521,11 @@ export default function TradingSimulator() {
         <h3 className="text-[#408830] font-semibold mb-2">Stock Price</h3>
         {/* Single row: half for Ticker, half for Time Window */}
         <div className="flex flex-wrap mb-4 gap-4">
-          <div className="w-full md:w-1/2">
+          <div className="w-full md:w-2/5">
             <Label>Chart Ticker</Label>
             <StockTickerDropdown onSelect={(t) => setChartTicker(t.symbol)} />
           </div>
-          <div className="w-full md:w-1/2">
+          <div className="w-full md:w-2/5">
             <Label>Chart Time Window</Label>
             <select
               value={timeWindow}
@@ -532,7 +545,7 @@ export default function TradingSimulator() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              tickFormatter={(val) => val} // "YYYY-MM-DD" only
+              tickFormatter={(val) => val.split("T")[0]} // Format date to "YYYY-MM-DD"
               label={{
                 value: "Date",
                 position: "insideBottom",
@@ -698,25 +711,11 @@ export default function TradingSimulator() {
         </CardContent>
       </Card>
 
-     {/* 6) AI Chat (Optional) */}
+     {/* AI Chat */}
+    <Chatbot />
      
-      <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-         <CardHeader>
-           <CardTitle className="text-[#408830]">AI Trading Assistant</CardTitle>
-          </CardHeader>
-         <CardContent>
-           <div className="flex gap-4">
-            <Input placeholder="Ask me anything about trading..." className="flex-1" />
-             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-               <Button className="bg-[#408830] hover:bg-[#509048]">Send</Button>
-              </motion.div>
-           </div>
-          </CardContent>
-      </Card>
-      
 
-
-      {/* Success Toast */}
+    {/* Success Toast */}
       {showSuccessToast && (
         <div className="fixed right-4 bottom-4 animate-slideInUp">
           <div className="bg-green-600 text-white py-2 px-4 rounded shadow-lg">
