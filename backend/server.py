@@ -13,28 +13,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mapping of timeframes to yahoo_fin API
-TIMEFRAME_MAP = {
-    "1d": 1,
-    "5d": 5,
-    "1mo": 30,
-    "6mo": 180,
-    "1y": 365,
-    "5y": 1825,
-}
-
 @app.get("/stock-data")
 def get_stock_data(ticker: str, startDate: str, endDate: str):
-    """
-    Fetch daily historical data from 'startDate' up to 'endDate' for the given ticker.
-    """
     try:
-        # Parse incoming string dates (YYYY-MM-DD)
         start_date_obj = datetime.strptime(startDate, "%Y-%m-%d")
         end_date_obj = datetime.strptime(endDate, "%Y-%m-%d")
 
-        # If user picks an end date in the future, clamp to "today" 
-        # so that yahoo_fin doesn't fail or return partial data
+        # Clamp future end dates to "today" so yahoo_fin won't fail
         today = datetime.today()
         if end_date_obj > today:
             end_date_obj = today
@@ -43,21 +28,22 @@ def get_stock_data(ticker: str, startDate: str, endDate: str):
             ticker,
             start_date=start_date_obj,
             end_date=end_date_obj,
-            index_as_date=False  # so that the DataFrame has a 'date' column
+            index_as_date=False  # DataFrame will have a 'date' column
         )
-
         if stock_data is None or stock_data.empty:
-            return []  # Return an empty list if there's no data
+            return []
 
-        # "stock_data" should contain columns => ['date', 'open', 'high', 'low', 'close', 'adjclose', 'volume']
-        # Rename 'close' to 'price' so it matches the front-end code
+        # We want date, open, high, low, close, adjclose, volume in the response
+        # But rename 'close' => 'price' for convenience
         stock_data.rename(columns={"close": "price"}, inplace=True)
 
-        # Convert to a list of dicts
-        records = stock_data[["date", "price"]].to_dict(orient="records")
-        return records
+        # Convert relevant columns to a list of dicts
+        # (adjust as needed if you prefer different naming)
+        records = stock_data[
+            ["date", "open", "high", "low", "price", "adjclose", "volume"]
+        ].to_dict(orient="records")
 
+        return records
     except Exception as e:
         print(f"Error fetching stock data: {e}")
         return []
-

@@ -3,3 +3,5 @@ pandas
 flask
 requests_html
 html5lib
+fastapi
+uvicorn
