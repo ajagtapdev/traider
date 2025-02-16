@@ -16,9 +16,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js"
-
-import { useFetchSimulation } from "../hooks/useSimulation";
-
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
 
 ChartJS.register(
   CategoryScale,
@@ -55,6 +54,14 @@ const portfolioData = {
     { date: "2023-05-01", value: 12500 },
   ],
 };
+
+interface tradeRecord {
+  initialInvestment: number;
+  finalValue: number;
+  valueOverTime: { date: string; value: number }[];
+}
+
+interface t
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -118,9 +125,7 @@ export function Sidebar() {
   }
 
   // const past = useQuery(api.past.get);
-  const simulation = useFetchSimulation();
-
-  // if (!simulation) return <p>Loading...</p>;
+  const trade  = useQuery(api.trade.getTrades, { userId: "1" });
 
   return (
     <motion.div
@@ -194,29 +199,33 @@ export function Sidebar() {
                 </div>
                 <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">Past Trade Records</h3>
-                    <p className="text-sm text-gray-600">
-                      Performance:{" "}
-                      {(((simulation.finalValue - simulation.initialInvestment) / simulation.initialInvestment) * 100).toFixed(2)}%
-                    </p>
-
-                    <div className="mt-2 h-24">
-                      <Line
-                        data={{
-                          labels: simulation.valueOverTime.map((data) => data.date), // Assuming date format is in the stored records
-                          datasets: [
-                            {
-                              label: "Value",
-                              data: simulation.valueOverTime.map((data) => data.value),
-                              borderColor: "rgb(34, 197, 94)",
-                              backgroundColor: "rgba(34, 197, 94, 0.1)",
-                              tension: 0.1,
-                              fill: true,
-                            },
-                          ],
-                        }}
-                        options={{ responsive: true, maintainAspectRatio: false }}
-                      />
+                  {past?.map((record: tradeRecord, index: number) => (
+                    <div key={record.initialInvestment} className="mb-4">
+                      <h4 className="text-md font-semibold text-gray-700">Trade {index + 1}</h4>
+                        <p className="text-sm text-gray-600">
+                          Performance:{" "}
+                          {(((record.finalValue - record.initialInvestment) / record.initialInvestment) * 100).toFixed(2)}%
+                        </p>
+                        <div className="mt-2 h-24">
+                          <Line
+                            data={{
+                              labels: record.valueOverTime.map((data) => data.date), // Assuming date format is in the stored records
+                              datasets: [
+                                {
+                                  label: "Value",
+                                  data: record.valueOverTime.map((data) => data.value),
+                                  borderColor: "rgb(34, 197, 94)",
+                                  backgroundColor: "rgba(34, 197, 94, 0.1)",
+                                  tension: 0.1,
+                                  fill: true,
+                                },
+                              ],
+                            }}
+                            options={{ responsive: true, maintainAspectRatio: false }}
+                          />
+                        </div>
                     </div>
+                  ))}
                 </div>
               </div>
             </div>

@@ -22,10 +22,11 @@ const schema = defineSchema({
   trade: defineTable({
     userId: v.id("users"),
     date: v.string(),
+    action: v.string(),
     ticker: v.string(),
     quantity: v.number(),
     price: v.number(),
-    action: v.string()
+    tv: v.number(),
   })
 });
 
