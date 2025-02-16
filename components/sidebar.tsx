@@ -106,7 +106,6 @@ export function Sidebar() {
     ],
   }
 
-  // const tasks = useQuery(api.tasks.get);
   const past = useQuery(api.past.get);
 
   return (
@@ -123,7 +122,7 @@ export function Sidebar() {
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
       <div className="flex h-16 items-center justify-center">
-        <h1 className="text-2xl font-bold text-gray-800">Logo</h1>
+        <h1 className="text-2xl font-bold text-gray-800"></h1>
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {menuItems.map((item, index) => (
