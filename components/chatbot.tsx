@@ -35,7 +35,7 @@ export default function ChatBot() {
   
         // Process the stream chunk by chunk
         const lines = buffer.split("\n\n");
-        buffer = lines.pop() || ""; // Keep unfinished chunk for next iteration
+        buffer = lines.pop() ||  ""; // Keep unfinished chunk for next iteration
   
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -68,7 +68,7 @@ return (
             <div className="h-64 overflow-y-auto border p-4 rounded-lg bg-gray-50">
                 {messages.map((msg, index) => (
                     <div key={index} className={`mb-2 ${msg.role === "user" ? "text-right" : "text-left"}`}>
-                        <span className={`inline-block px-4 py-2 rounded-lg ${msg.role === "user" ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-800"}`}>
+                        <span className={`inlin e-block px-4 py-2 rounded-lg ${msg.role === "user" ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-800"}`}>
                             {msg.content}
                         </span>
                     </div>

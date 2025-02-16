@@ -9,7 +9,8 @@ type Trade = {
   price: number
   action: "buy" | "sell"
 }
-  */
+
+*/
 
 
 const TradeHistoryTable = ({ trades }) => { 
