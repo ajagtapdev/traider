@@ -618,8 +618,8 @@ export default function TradingSimulator() {
                 <Label>Quantity</Label>
                 <Input
                   type="number"
-                  value={tradeQuantity}
-                  onChange={(e) => setTradeQuantity(Number(e.target.value))}
+                  value={tradeQuantity === 0 ? "" : tradeQuantity}
+                  onChange={(e) => setTradeQuantity(Number(e.target.value) || 0)}
                 />
                 <p className="text-sm text-gray-700 mt-1">
                   Total Value: $

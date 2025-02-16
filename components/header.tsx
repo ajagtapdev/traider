@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
+
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -6,7 +8,6 @@ import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
-const globallinks = [{ name: "About", href: "/about" }];
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
