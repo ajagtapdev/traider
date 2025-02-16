@@ -2,7 +2,7 @@
 
 import { Sidebar } from "@/components/sidebar";
 import Header from "@/components/header";
-import { TradingSimulator } from "@/components/trading-simulator";
+import TradingSimulator from "@/components/trading-simulator";
 import ChatBot from "@/components/chatbot";
 
 
