@@ -4,7 +4,7 @@ import { v } from "convex/values";
 // Insert a new trade into the database
 export const addTrade = mutation({
   args: {
-    userId: v.string(),
+    userId: v.id("users"),
     date: v.string(),
     action: v.string(),
     ticker: v.string(),
@@ -15,7 +15,7 @@ export const addTrade = mutation({
  
  
   handler: async (ctx, args) => {
-    await ctx.db.insert("trades", args);
+    await ctx.db.insert("trade", args);
   },
 });
 
@@ -24,7 +24,7 @@ export const getTrades = query({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
     return await ctx.db
-      .query("trades")
+      .query("trade")
       .filter((q) => q.eq(q.field("userId"), userId))
       .order("desc")
       .collect();
