@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Search } from "lucide-react"
-import Papa, { ParseResult } from "papaparse"
+import Papa from "papaparse"
 
 type StockTicker = {
   symbol: string
@@ -27,6 +27,7 @@ export function StockTickerDropdown({ onSelect }: StockTickerDropdownProps) {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const parsedData: StockTicker[] = results.data.map((row: any) => ({
               symbol: row["Ticker"],
               name: row["Company Name"],

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.22.13",
     "@clerk/nextjs": "^6.11.3",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-popover": "^1.1.6",
@@ -19,6 +20,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.19.2",
+    "fastapi": "^0.0.8",
     "framer-motion": "^12.4.3",
     "lucide-react": "^0.475.0",
     "next": "^15.1.7",
