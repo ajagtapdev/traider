@@ -350,7 +350,7 @@ export default function TradingSimulator() {
 
       {/* Setup Modal */}
       <Dialog open={showSetup} onOpenChange={setShowSetup}>
-        <DialogContent className="bg-[#80b048] text-black rounded-xl">
+        <DialogContent className="bg-[#fdf6e9] text-black rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold mb-4">
               Setup Simulation
