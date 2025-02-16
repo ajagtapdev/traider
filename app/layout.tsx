@@ -4,13 +4,6 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { ConvexClientProvider } from "./ConvexClientProvider";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton
-} from '@clerk/nextjs'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,7 +18,6 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
       <html lang="en">
         <head>
           <link
@@ -42,16 +34,9 @@ export default function RootLayout({
             "min-h-screen bg-gradient-to-br from-[#F8F4E3] to-[#E8E1C8] text-gray-800 antialiased",
           )}
         >
-          <SignedOut>
-            <SignInButton />
-          </SignedOut>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </body>
       </html>
-    </ClerkProvider>
   )
 }
 

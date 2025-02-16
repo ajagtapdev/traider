@@ -37,7 +37,7 @@ export default function About() {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-5xl font-bold text-gray-900 mb-4 text-center">
-            About TradePro
+            About traider
           </h1>
           <p className="text-xl text-gray-600 mb-12 text-center max-w-3xl mx-auto">
             Empowering traders with cutting-edge technology and unparalleled
@@ -56,7 +56,7 @@ export default function About() {
               Our Mission
             </h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              At TradePro, we're on a mission to democratize trading by
+              At traider, we're on a mission to democratize trading by
               providing professional-grade tools and education to traders of all
               experience levels. We believe that with the right resources and
               knowledge, anyone can become a successful trader.
@@ -102,7 +102,7 @@ export default function About() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <h2 className="text-3xl font-semibold text-gray-900 mb-8 text-center">
-            Why Choose TradePro?
+            Why Choose traider?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
@@ -153,7 +153,7 @@ export default function About() {
             Our Commitment to You
           </h2>
           <p className="text-gray-600 mb-6 text-center max-w-3xl mx-auto leading-relaxed">
-            At TradePro, we're committed to your success. Our platform is
+            At traider, we're committed to your success. Our platform is
             designed to grow with you, providing the tools and insights you need
             at every stage of your trading journey. From beginners to seasoned
             professionals, we're here to help you achieve your financial goals.

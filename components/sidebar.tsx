@@ -131,12 +131,6 @@ export function Sidebar() {
       transition={{ duration: 0.3 }}
       className="relative flex h-full flex-col bg-[#F8F4E3]/50 backdrop-blur-sm border-r border-[#E8D8B2]"
     >
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="absolute -right-3 top-4 z-10 rounded-full bg-[#E8D8B2] p-1 text-gray-800 shadow-lg"
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
       <div className="flex h-16 items-center justify-center">
         <h1 className="text-2xl font-bold text-gray-800"></h1>
       </div>
