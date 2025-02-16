@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, User, Menu, X } from "lucide-react";
+import { Home, User, Trophy, Menu, X } from "lucide-react";
 import { Bar, Pie, Line } from "react-chartjs-2";
+import { useRouter } from "next/navigation";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -32,8 +33,9 @@ ChartJS.register(
 );
 
 const menuItems = [
-  { icon: Home, label: "Trading Simulator" },
-  { icon: User, label: "Profile" },
+  { icon: Home, label: "Trading Simulator", path: "/" },
+  { icon: User, label: "Profile", path: "/profile" },
+  { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
 ];
 
 // Pseudo data for portfolio visualizations
@@ -63,6 +65,7 @@ interface tradeRecord {
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
 
   const percentIncrease =
     ((portfolioData.currentValue - portfolioData.initialInvestment) /
@@ -153,6 +156,7 @@ export function Sidebar() {
             className="flex items-center space-x-4 rounded-lg p-3 transition-colors hover:bg-white/50 text-gray-700 hover:text-gray-900"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push(item.path)}
           >
             <item.icon size={24} />
             {isOpen && <span>{item.label}</span>}
