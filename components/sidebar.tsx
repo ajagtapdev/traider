@@ -139,6 +139,7 @@ export function Sidebar() {
       </button>
       <div className="flex h-16 items-center justify-center">
         <h1 className="text-2xl font-bold text-gray-800"></h1>
+      </div>
       <div className="flex items-center justify-center relative h-16">
         <button
           onClick={() => setIsOpen(!isOpen)}
