@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, User, Menu, X } from "lucide-react";
+import { Home, User, Trophy, Calculator, Menu, X } from "lucide-react";
 import { Bar, Pie, Line } from "react-chartjs-2";
+import { useRouter } from "next/navigation";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -32,8 +33,10 @@ ChartJS.register(
 );
 
 const menuItems = [
-  { icon: Home, label: "Trading Simulator" },
-  { icon: User, label: "Profile" },
+  { icon: Home, label: "Trading Simulator", path: "/" },
+  { icon: User, label: "Profile", path: "/profile" },
+  { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
+  { icon: Calculator, label: "Finance Calculator", path: "/calculator" },
 ];
 
 // Pseudo data for portfolio visualizations
@@ -65,24 +68,28 @@ interface t
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-
+  const router = useRouter();
+  const initialInvestment = portfolioData.initialInvestment;
+  const currentValue = portfolioData.currentValue;
   const percentIncrease =
-    ((portfolioData.currentValue - portfolioData.initialInvestment) /
-      portfolioData.initialInvestment) *
-    100;
+    ((currentValue - initialInvestment) / initialInvestment) * 100;
 
   const barChartData = {
-    labels: ["Portfolio Performance"],
+    labels: ["Initial Investment", "Current Value"], // Now each bar has its own label
     datasets: [
       {
-        label: "Percentage Increase",
-        data: [percentIncrease],
-        backgroundColor:
+        label: "Portfolio Value ($)",
+        data: [initialInvestment, currentValue], // Two separate bars
+        backgroundColor: [
+          "rgba(148, 151, 153, 0.6)", // Blue for Initial Investment
           percentIncrease >= 0
-            ? "rgba(34, 197, 94, 0.6)"
-            : "rgba(239, 68, 68, 0.6)",
-        borderColor:
+            ? "rgba(34, 197, 94, 0.6)" // Green if positive growth
+            : "rgba(239, 68, 68, 0.6)", // Red if negative growth
+        ],
+        borderColor: [
+          "rgba(148, 151, 153, 0.6)", // Blue for Initial Investment
           percentIncrease >= 0 ? "rgb(34, 197, 94)" : "rgb(239, 68, 68)",
+        ],
         borderWidth: 1,
       },
     ],
@@ -94,16 +101,16 @@ export function Sidebar() {
       {
         data: portfolioData.stocks.map((stock) => stock.value),
         backgroundColor: [
-          "rgba(255, 99, 132, 0.6)",
-          "rgba(54, 162, 235, 0.6)",
-          "rgba(255, 206, 86, 0.6)",
-          "rgba(75, 192, 192, 0.6)",
+          "rgba(16, 138, 53, 0.6)",
+          "rgba(30, 201, 135, 0.6)",
+          "rgba(103, 230, 83, 0.6)",
+          "rgba(0, 255, 4, 0.39)",
         ],
         borderColor: [
-          "rgba(255, 99, 132, 1)",
-          "rgba(54, 162, 235, 1)",
-          "rgba(255, 206, 86, 1)",
-          "rgba(75, 192, 192, 1)",
+          "rgba(16, 138, 53, 0.6)",
+          "rgba(30, 201, 135, 0.6)",
+          "rgba(103, 230, 83, 0.6)",
+          "rgba(0, 255, 4, 0.39)",
         ],
         borderWidth: 1,
       },
@@ -156,6 +163,7 @@ export function Sidebar() {
             className="flex items-center space-x-4 rounded-lg p-3 transition-colors hover:bg-white/50 text-gray-700 hover:text-gray-900"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push(item.path)}
           >
             <item.icon size={24} />
             {isOpen && <span>{item.label}</span>}
@@ -176,15 +184,22 @@ export function Sidebar() {
                 Portfolio
               </h2>
               <div className="grid gap-6 md:grid-cols-2">
-                <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
-                  <h3 className="mb-2 text-lg font-semibold text-gray-800">
-                    Portfolio Performance
-                  </h3>
-                  <Bar
-                    data={barChartData}
-                    options={{ indexAxis: "y", responsive: true }}
-                  />
-                </div>
+              <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
+                <h3 className="mb-20 text-lg font-semibold text-gray-800">
+                  Portfolio Performance
+                </h3>
+                <Bar
+                  data={barChartData}
+                  options={{
+                    responsive: true,
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                      },
+                    },
+                  }}
+                />
+              </div>
                 <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">
                     Portfolio Distribution

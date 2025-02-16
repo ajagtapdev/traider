@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
-
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
@@ -16,7 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   RadioGroup,
@@ -30,9 +29,10 @@ import {
   TableRow,
   TableCell
 } from "@/components/ui/table"
-import { ChevronRight, FastForward, Calendar } from "heroicons-react"
+import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
 import Chatbot from "./chatbot"
+import Contexts from "./Contexts"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -350,7 +350,7 @@ export default function TradingSimulator() {
 
       {/* Setup Modal */}
       <Dialog open={showSetup} onOpenChange={setShowSetup}>
-        <DialogContent className="bg-[#80b048] text-black rounded-xl">
+        <DialogContent className="bg-[#fdf6e9] text-black rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold mb-4">
               Setup Simulation
@@ -568,8 +568,9 @@ export default function TradingSimulator() {
         </ResponsiveContainer>
       </div>
 
+
       {/* Place Trade + Trading Coach (no AI chatbot) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {/* Place Trade */}
         <Card className="bg-white shadow-lg">
           <CardHeader>
@@ -645,35 +646,7 @@ export default function TradingSimulator() {
         </Card>
 
         {/* Trading Coach only (no AI chatbot) */}
-        <Card className="bg-white shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-[#408830]">Trading Coach</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[240px] rounded-md border p-3">
-              <div className="space-y-3">
-                <div className="bg-[#fdf6e9] p-3 rounded">
-                  <p className="font-medium text-[#408830]">Market Analysis</p>
-                  <p className="text-sm text-gray-600">
-                    The market is showing strong momentum...
-                  </p>
-                </div>
-                <div className="bg-[#fdf6e9] p-3 rounded">
-                  <p className="font-medium text-[#408830]">Risk Assessment</p>
-                  <p className="text-sm text-gray-600">
-                    Current position suggests moderate risk...
-                  </p>
-                </div>
-                <div className="bg-[#fdf6e9] p-3 rounded">
-                  <p className="font-medium text-[#408830]">Recommendation</p>
-                  <p className="text-sm text-gray-600">
-                    Consider taking partial profits...
-                  </p>
-                </div>
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+        <Contexts />
       </div>
 
       {/* Trade History */}
