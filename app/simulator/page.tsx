@@ -4,8 +4,7 @@ import { Sidebar } from "@/components/sidebar";
 import Header from "@/components/header";
 import { TradingSimulator } from "@/components/trading-simulator";
 import ChatBot from "@/components/chatbot";
-// import { useQuery } from "convex/react";
-// import { api } from "../../convex/_generated/api";
+
 
 const Simulator = () => {
   return (
