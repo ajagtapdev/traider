@@ -10,20 +10,12 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend,
-  ChartEvent,
-  ActiveElement,
+  Legend
 } from "chart.js"
-import {
-  Calendar,
-  DollarSign,
-  FastForward,
-  TrendingUp,
-  TrendingDown,
-  Save,
-} from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
+import { Calendar, DollarSign, FastForward } from "lucide-react"
 
+// Register Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -34,91 +26,246 @@ ChartJS.register(
   Legend
 )
 
-type Trade = {
+/** Number of days to look back for the stock price chart. */
+const TIME_WINDOW_OPTIONS = {
+  "1w": 7,
+  "2w": 14,
+  "1m": 30,
+  "3m": 90,
+  "6m": 180,
+  "1y": 365,
+  "5y": 1825,
+}
+
+/** Full daily record from server. */
+type StockRow = {
   date: string
+  open: number
+  high: number
+  low: number
+  price: number      // (renamed from 'close')
+  adjclose: number
+  volume: number
+}
+
+type Trade = {
+  date: string         // 'YYYY-MM-DD'
   ticker: string
   quantity: number
   price: number
   action: "buy" | "sell"
 }
 
-export function TradingSimulator() {
-  const [ticker, setTicker] = useState("AAPL")
-  const [startDate, setStartDate] = useState(new Date("2000-01-01"))
-  const [currentDate, setCurrentDate] = useState(new Date("2000-01-01"))
-  const [timeframe, setTimeframe] = useState(1) // Represents timeframe in months
-  const [startingCapital, setStartingCapital] = useState(10000)
-  const [capital, setCapital] = useState(startingCapital)
-  const [stockData, setStockData] = useState<{ date: string; price: string }[]>([])
-  const [hoveredData, setHoveredData] = useState<{ date: string; price: string } | null>(null)
-  const [trades, setTrades] = useState<Trade[]>([])
-  const [tradeQuantity, setTradeQuantity] = useState(0)
-  const [portfolioValue, setPortfolioValue] = useState(0)
+/**
+ * Utility: add days to a Date
+ */
+function addDays(base: Date, offset: number) {
+  const d = new Date(base.getTime())
+  d.setDate(d.getDate() + offset)
+  return d
+}
 
-  // Reset currentDate whenever startDate or timeframe changes.
+/**
+ * Utility: format Date => 'YYYY-MM-DD'
+ */
+function fmt(date: Date) {
+  return date.toISOString().split("T")[0]
+}
+
+/**
+ * The main Trading Simulator component
+ */
+export function TradingSimulator() {
+  // -------------------------------------------
+  // 1) Top-level state: heading, sim config
+  // -------------------------------------------
+  const [startDate, setStartDate] = useState(new Date("2000-01-01"))
+  const [simulationDurationMonths, setSimulationDurationMonths] = useState(6)
+  const [startingCapital, setStartingCapital] = useState(10000)
+
+  // Current sim date & cash
+  const [currentDate, setCurrentDate] = useState(startDate)
+  const [capital, setCapital] = useState(startingCapital)
+
+  // The ticker for the stock price chart
+  const [chartTicker, setChartTicker] = useState("AAPL")
+
+  // The “time window” for the stock chart
+  const [timeWindowKey, setTimeWindowKey] =
+    useState<keyof typeof TIME_WINDOW_OPTIONS>("1m")
+
+  // Fetched daily data from backend
+  const [stockData, setStockData] = useState<StockRow[]>([])
+
+  // All user trades
+  const [trades, setTrades] = useState<Trade[]>([])
+
+  // The daily portfolio history (from start date to current date)
+  const [portfolioHistory, setPortfolioHistory] = useState<
+    { date: string; value: number }[]
+  >([])
+
+  // Provide a “toast” when a trade is placed
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
+
+  // -------------------------------------------
+  // 2) Place Trade panel: uses chartTicker
+  // -------------------------------------------
+  const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy")
+  const [tradeQuantity, setTradeQuantity] = useState(1)
+  // By default, trade date is the currentDate
+  const [tradeDate, setTradeDate] = useState<string>(fmt(startDate))
+
+  // Whenever config changes, reset the simulator
   useEffect(() => {
     setCurrentDate(startDate)
-  }, [startDate, timeframe])
+    setCapital(startingCapital)
+    setTrades([])
+  }, [startDate, simulationDurationMonths, startingCapital])
 
-  // Fetch real stock data from the backend using the current simulation window.
+  // If currentDate changes, sync the "place trade" date
   useEffect(() => {
-    const fetchRealStockData = async () => {
-      // Compute window start: currentDate minus (timeframe * 30 days)
-      const windowStart = new Date(currentDate.getTime() - timeframe * 30 * 24 * 60 * 60 * 1000)
-      const windowStartStr = windowStart.toISOString().split("T")[0]
-      const currentDateStr = currentDate.toISOString().split("T")[0]
+    setTradeDate(fmt(currentDate))
+  }, [currentDate])
 
-      console.log("Fetching data for ticker:", ticker)
-      console.log("Window start:", windowStartStr, "Current Date:", currentDateStr)
+  // -------------------------------------------
+  // 3) Fetch stock data for the CHART ticker
+  // -------------------------------------------
+  const timeWindowDays = TIME_WINDOW_OPTIONS[timeWindowKey]
+  useEffect(() => {
+    const fetchData = async () => {
+      const windowStart = addDays(currentDate, -timeWindowDays)
+      const startStr = fmt(windowStart)
+      const endStr = fmt(currentDate)
 
       try {
-        const response = await fetch(
-          `/api/stock-data?ticker=${ticker}&startDate=${windowStartStr}&endDate=${currentDateStr}`
+        const res = await fetch(
+          `/api/stock-data?ticker=${chartTicker}&startDate=${startStr}&endDate=${endStr}`
         )
-        const data = await response.json()
-        console.log("Raw data from API:", data)
-
-        // Filter data so that it only includes dates up to the simulation's currentDate.
-        const filteredData = data.filter((d: { date: string; price: string }) => {
-          // Adjust this comparison if the date format is not exactly "YYYY-MM-DD"
-          return d.date <= currentDateStr
-        })
-        console.log("Filtered data (<= currentDate):", filteredData)
-        setStockData(filteredData)
-      } catch (error) {
-        console.error("Error fetching real stock data:", error)
+        const data = await res.json()
+        const parsed: StockRow[] = data.map((row: any) => ({
+          date: row.date,
+          open: +row.open,
+          high: +row.high,
+          low: +row.low,
+          price: +row.price,
+          adjclose: +row.adjclose,
+          volume: +row.volume,
+        }))
+        // Filter out anything after current date
+        const filtered = parsed.filter((r) => r.date <= endStr)
+        setStockData(filtered)
+      } catch (err) {
+        console.error("Error fetching stock data:", err)
+        setStockData([])
       }
     }
+    fetchData()
+  }, [chartTicker, currentDate, timeWindowDays])
 
-    if (ticker && currentDate) {
-      fetchRealStockData()
+  // -------------------------------------------
+  // 4) Rebuild the daily portfolio from start->current
+  //    whenever "currentDate" or "trades" changes
+  // -------------------------------------------
+  useEffect(() => {
+    buildPortfolioHistory()
+  }, [currentDate, trades, stockData])
+
+  /**
+   * Return the "last known price" for chartTicker on a given date string
+   * using the fetched stockData. If none found, returns 0.
+   */
+  function getPriceForDate(dateStr: string) {
+    // Filter for rows <= that date
+    const relevant = stockData.filter((row) => row.date <= dateStr)
+    if (!relevant.length) return 0
+    return relevant[relevant.length - 1].price
+  }
+
+  /**
+   * For all trades on/before `dateStr`, compute how many shares we own
+   * and how much net capital is left from the startingCapital.
+   */
+  function computePositionAndCapital(dateStr: string) {
+    let shares = 0
+    let netSpent = 0
+    // Sum up all trades that occurred on or before dateStr
+    for (const t of trades) {
+      if (t.date <= dateStr && t.ticker === chartTicker) {
+        const cost = t.price * t.quantity
+        if (t.action === "buy") {
+          shares += t.quantity
+          netSpent += cost
+        } else {
+          shares -= t.quantity
+          netSpent -= cost
+        }
+      }
     }
-  }, [ticker, currentDate, timeframe])
+    const leftoverCash = startingCapital - netSpent
+    return { shares, leftoverCash }
+  }
 
-  const chartData = {
-    labels: stockData.map((d) => d.date),
+  /**
+   * Build a daily portfolio array from the startDate up to currentDate,
+   * using the stock's daily price & trades that happened on each day.
+   */
+  function buildPortfolioHistory() {
+    const history: { date: string; value: number }[] = []
+    let d = new Date(startDate.getTime())
+
+    // Loop day by day up to currentDate
+    while (d <= currentDate) {
+      const ds = fmt(d) // 'YYYY-MM-DD'
+      const { shares, leftoverCash } = computePositionAndCapital(ds)
+      const price = getPriceForDate(ds)
+      const dailyValue = leftoverCash + shares * price
+      history.push({ date: ds, value: dailyValue })
+
+      d = addDays(d, 1)
+    }
+    setPortfolioHistory(history)
+  }
+
+  // -------------------------------------------
+  // 5) Chart Data & Options
+  // -------------------------------------------
+  // A) Stock Price chart
+  const stockPriceData = {
+    labels: stockData.map((r) => r.date),
     datasets: [
       {
-        label: ticker,
-        data: stockData.map((d) => Number.parseFloat(d.price)),
-        borderColor: "rgb(34, 197, 94)",
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
-        tension: 0.1,
+        label: `${chartTicker} Price`,
+        data: stockData.map((r) => r.price),
+        borderColor: "rgb(34,197,94)",
+        backgroundColor: "rgba(34,197,94,0.1)",
         fill: true,
+        tension: 0.1,
       },
     ],
   }
-
-  const options = {
+  // Custom tooltip => open/high/low/price/adjclose/volume
+  const stockChartOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: "top" as const,
-      },
-      title: {
-        display: true,
-        text: `${ticker} Stock Price`,
-        color: "#1F2937",
+      legend: { position: "top" as const },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) => {
+            const idx = ctx.dataIndex
+            const row = stockData[idx]
+            if (!row) return ""
+            return [
+              `Date: ${row.date}`,
+              `Open: ${row.open.toFixed(2)}`,
+              `High: ${row.high.toFixed(2)}`,
+              `Low:  ${row.low.toFixed(2)}`,
+              `Close: ${row.price.toFixed(2)}`,
+              `Adj Close: ${row.adjclose.toFixed(2)}`,
+              `Volume: ${row.volume}`,
+            ]
+          },
+        },
       },
     },
     scales: {
@@ -131,117 +278,170 @@ export function TradingSimulator() {
         grid: { color: "#E5E7EB" },
       },
     },
-    onHover: (event: ChartEvent, elements: ActiveElement[]) => {
-      if (elements && elements.length) {
-        const dataIndex = elements[0].index
-        setHoveredData(stockData[dataIndex])
-      } else {
-        setHoveredData(null)
-      }
+  }
+
+  // B) Portfolio line chart from portfolioHistory
+  const portfolioData = {
+    labels: portfolioHistory.map((p) => p.date),
+    datasets: [
+      {
+        label: "Portfolio Value",
+        data: portfolioHistory.map((p) => p.value),
+        borderColor: "rgb(34,197,94)",
+        backgroundColor: "rgba(34,197,94,0.1)",
+        fill: true,
+        tension: 0.1,
+      },
+    ],
+  }
+  // Only date + value in the tooltip
+  const portfolioOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: "top" as const },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) => {
+            const idx = ctx.dataIndex
+            const row = portfolioHistory[idx]
+            if (!row) return ""
+            return [`Date: ${row.date}`, `Value: $${row.value.toFixed(2)}`]
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        ticks: { color: "#4B5563" },
+        grid: { color: "#E5E7EB" },
+      },
+      x: {
+        ticks: { color: "#4B5563" },
+        grid: { color: "#E5E7EB" },
+      },
     },
   }
 
-  const handleTrade = (action: "buy" | "sell") => {
-    const currentPrice =
-      Number(
-        stockData.find(
-          (d) => d.date === currentDate.toISOString().split("T")[0]
-        )?.price || 0
-      )
-    const tradeValue = currentPrice * tradeQuantity
+  // -------------------------------------------
+  // 6) Time Travel & Trades
+  // -------------------------------------------
+  const fastForward = (days: number) => {
+    // Move currentDate forward, but not beyond (startDate + simulationDurationMonths)
+    const newDt = addDays(currentDate, days)
+    const simEnd = addDays(startDate, simulationDurationMonths * 30)
+    if (newDt <= simEnd) {
+      setCurrentDate(newDt)
+    } else {
+      alert("Cannot exceed simulation end date.")
+    }
+  }
 
-    if (action === "buy" && tradeValue > capital) {
-      alert("Insufficient funds for this trade.")
+  function placeTrade() {
+    // figure out the price
+    const price = getPriceForTradeDate(tradeDate)
+    if (price <= 0) {
+      alert("No valid price data for that date/ticker.")
       return
     }
+    const cost = price * tradeQuantity
 
-    if (action === "sell" && tradeQuantity > calculateHoldings()) {
-      alert("Insufficient stocks to sell.")
-      return
+    if (tradeAction === "buy") {
+      // check available
+      // But note: we keep capital in the “global” state, but it's actually ephemeral 
+      // since we reconstruct from trades. You can keep the immediate capital check:
+      const currentPosition = computePositionAndCapital(fmt(currentDate))
+      // effectively `currentPosition.leftoverCash` is how much they'd have *today*, 
+      // but user might be placing a trade in the future. For brevity, let's allow it 
+      // as long as “the sum of all buy trades isn't more than startingCapital overall.”
+      // or we can do a simpler approach:
+      const overallUsed = trades
+        .filter((t) => t.action === "buy")
+        .reduce((s, t) => s + t.price * t.quantity, 0)
+      const overallSells = trades
+        .filter((t) => t.action === "sell")
+        .reduce((s, t) => s + t.price * t.quantity, 0)
+      const netSpent = overallUsed - overallSells
+      if (netSpent + cost > startingCapital) {
+        alert("Insufficient capital to buy.")
+        return
+      }
+    } else {
+      // selling => ensure we own enough shares up to that date
+      const { shares } = computePositionAndCapital(tradeDate)
+      if (shares < tradeQuantity) {
+        alert("Not enough shares to sell on that date.")
+        return
+      }
     }
 
     const newTrade: Trade = {
-      date: currentDate.toISOString().split("T")[0],
-      ticker,
+      date: tradeDate,
+      ticker: chartTicker, // read-only from chart
       quantity: tradeQuantity,
-      price: currentPrice,
-      action,
+      price,
+      action: tradeAction,
     }
+    setTrades((prev) => [...prev, newTrade])
 
-    setTrades([...trades, newTrade])
-    setCapital(action === "buy" ? capital - tradeValue : capital + tradeValue)
-    setTradeQuantity(0)
-    updatePortfolioValue()
+    setShowSuccessToast(true)
+    setTimeout(() => setShowSuccessToast(false), 2000)
   }
 
-  const calculateHoldings = () => {
-    return trades.reduce((acc, trade) => {
-      return trade.action === "buy" ? acc + trade.quantity : acc - trade.quantity
-    }, 0)
+  function getPriceForTradeDate(ds: string) {
+    // same logic: last known price <= ds from stockData
+    const relevant = stockData.filter((r) => r.date <= ds)
+    if (!relevant.length) return 0
+    return relevant[relevant.length - 1].price
   }
 
-  const updatePortfolioValue = () => {
-    const currentPrice =
-      Number(
-        stockData.find(
-          (d) => d.date === currentDate.toISOString().split("T")[0]
-        )?.price || 0
-      )
-    const stockValue = calculateHoldings() * currentPrice
-    setPortfolioValue(capital + stockValue)
-  }
-
-  const fastForward = (days: number) => {
-    const newDate = new Date(
-      currentDate.getTime() + days * 24 * 60 * 60 * 1000
-    )
-    // Calculate the simulation end date based on the original start date and timeframe (in months)
-    const simulationEndDate = new Date(
-      startDate.getTime() + timeframe * 30 * 24 * 60 * 60 * 1000
-    )
-    if (newDate <= simulationEndDate) {
-      setCurrentDate(newDate)
-      updatePortfolioValue()
-    } else {
-      alert("Cannot fast forward beyond the simulation end date.")
-    }
-  }
-
-  const saveSimulation = () => {
-    console.log("Saving simulation:", {
-      startDate,
-      endDate: currentDate,
-      startingCapital,
-      finalCapital: capital,
-      trades,
-      portfolioValue,
-    })
-
-    // Reset the simulator
-    setStartDate(new Date("2000-01-01"))
-    setCurrentDate(new Date())
-    setCapital(startingCapital)
-    setTrades([])
-    setPortfolioValue(0)
-    alert("Simulation saved and reset!")
-  }
-
+  // -------------------------------------------
+  // Render
+  // -------------------------------------------
   return (
-    <div className="bg-white/70 backdrop-blur-sm rounded-lg shadow-md p-6 mt-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Trading Simulator</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div className="p-4 space-y-6">
+
+      {/* Heading & Start Simulation Button */}
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-2">Trading Simulator</h1>
+        <button className="bg-green-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-green-700">
+          Start Simulation
+        </button>
+      </div>
+
+      {/* 1) Quick stats row */}
+      <div className="flex items-center justify-between bg-green-50 rounded-md p-4">
+        <div className="font-medium text-gray-700">
+          Starting Capital: ${startingCapital.toFixed(2)}
+        </div>
+        <div className="font-medium text-gray-700">
+          Current Cash (today): $
+          {
+            // compute net leftover as of currentDate
+            computePositionAndCapital(fmt(currentDate)).leftoverCash.toFixed(2)
+          }
+        </div>
+      </div>
+
+      {/* 2) Sim Config row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Start Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
             <input
               type="date"
-              value={startDate.toISOString().split("T")[0]}
-              onChange={(e) => setStartDate(new Date(e.target.value))}
-              className="w-full rounded-md bg-white/50 py-2 pl-10 pr-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+              value={fmt(startDate)}
+              onChange={(e) => {
+                const d = new Date(e.target.value)
+                setStartDate(d)
+              }}
+              className="w-full rounded-md bg-white py-2 pl-10 pr-4 text-gray-800 
+                         focus:outline-none focus:ring-2 focus:ring-green-200"
             />
           </div>
         </div>
+        {/* Starting Capital */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Starting Capital</label>
           <div className="relative">
@@ -250,128 +450,260 @@ export function TradingSimulator() {
               type="number"
               value={startingCapital}
               onChange={(e) => setStartingCapital(Number(e.target.value))}
-              className="w-full rounded-md bg-white/50 py-2 pl-10 pr-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+              className="w-full rounded-md bg-white py-2 pl-10 pr-4 text-gray-800 
+                         focus:outline-none focus:ring-2 focus:ring-green-200"
             />
           </div>
         </div>
+        {/* Simulation Duration */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Simulation Duration</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Simulation Duration (Months)</label>
           <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(Number(e.target.value))}
-            className="w-full rounded-md bg-white/50 py-2 px-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+            value={simulationDurationMonths}
+            onChange={(e) => setSimulationDurationMonths(Number(e.target.value))}
+            className="w-full rounded-md bg-white py-2 px-4 text-gray-800 
+                       focus:outline-none focus:ring-2 focus:ring-green-200"
           >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-              <option key={month} value={month}>
-                {month}
-              </option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={m}>{m}</option>
             ))}
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+      {/* 3) Chart Ticker + Time Window */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Stock Ticker</label>
-          <StockTickerDropdown onSelect={(selectedTicker) => setTicker(selectedTicker.symbol)} />
+          <label className="block text-sm font-medium text-gray-700 mb-1">Chart Ticker</label>
+          <StockTickerDropdown onSelect={(t) => setChartTicker(t.symbol)} />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Timeframe</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Chart Time Window</label>
           <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(Number(e.target.value))}
-            className="w-full rounded-md bg-white/50 py-2 px-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+            value={timeWindowKey}
+            onChange={(e) => setTimeWindowKey(e.target.value as keyof typeof TIME_WINDOW_OPTIONS)}
+            className="w-full rounded-md bg-white py-2 px-4 text-gray-800 
+                       focus:outline-none focus:ring-2 focus:ring-green-200"
           >
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-              <option key={month} value={month}>
-                {month}
-              </option>
+            {Object.keys(TIME_WINDOW_OPTIONS).map((k) => (
+              <option key={k} value={k}>{k}</option>
             ))}
           </select>
         </div>
       </div>
-      <div className="relative mb-4">
-        <Line data={chartData} options={options} />
-        {hoveredData && (
-          <div className="absolute top-0 right-0 bg-white text-gray-800 p-2 rounded shadow-md">
-            <p className="text-sm">Date: {hoveredData.date}</p>
-            <p className="text-sm font-semibold">Price: ${hoveredData.price}</p>
-          </div>
-        )}
+
+      {/* 4) Stock Price Chart */}
+      <div className="bg-white rounded-md p-4">
+        <Line data={stockPriceData} options={stockChartOptions} />
       </div>
-      <div className="flex items-center space-x-4 mb-4">
+
+      {/* 5) Portfolio Value Chart */}
+      <div className="bg-white rounded-md p-4">
+        <Line data={portfolioData} options={portfolioOptions} />
+      </div>
+
+      {/* 6) Fast Forward row */}
+      <div className="flex items-center space-x-4">
         <button
           onClick={() => fastForward(1)}
-          className="px-4 py-2 bg-[#E8D8B2] text-gray-800 rounded-md hover:bg-[#E0D0A0] focus:outline-none focus:ring-2 focus:ring-[#E8D8B2] focus:ring-offset-2"
+          className="px-4 py-2 bg-green-100 text-gray-800 rounded-md 
+                     hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-300"
         >
           <FastForward size={20} className="inline-block mr-2" />
           Next Day
         </button>
         <button
           onClick={() => fastForward(7)}
-          className="px-4 py-2 bg-[#E8D8B2] text-gray-800 rounded-md hover:bg-[#E0D0A0] focus:outline-none focus:ring-2 focus:ring-[#E8D8B2] focus:ring-offset-2"
+          className="px-4 py-2 bg-green-100 text-gray-800 rounded-md 
+                     hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-300"
         >
           <FastForward size={20} className="inline-block mr-2" />
           Next Week
         </button>
-        <span className="text-gray-700">Current Date: {currentDate.toISOString().split("T")[0]}</span>
-      </div>
-      <div className="flex items-center space-x-4 mb-4">
-        <input
-          type="number"
-          value={tradeQuantity}
-          onChange={(e) => setTradeQuantity(Number(e.target.value))}
-          placeholder="Quantity"
-          className="w-1/3 rounded-md bg-white/50 py-2 px-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
-        />
         <button
-          onClick={() => handleTrade("buy")}
-          className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          onClick={() => fastForward(30)}
+          className="px-4 py-2 bg-green-100 text-gray-800 rounded-md 
+                     hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-300"
         >
-          <TrendingUp size={20} className="inline-block mr-2" />
-          Buy
+          <FastForward size={20} className="inline-block mr-2" />
+          Next Month
         </button>
-        <button
-          onClick={() => handleTrade("sell")}
-          className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-        >
-          <TrendingDown size={20} className="inline-block mr-2" />
-          Sell
-        </button>
-        <span className="text-gray-700">Available Capital: ${capital.toFixed(2)}</span>
+        <span className="text-gray-700 font-medium">
+          Current Date: {fmt(currentDate)}
+        </span>
       </div>
-      <div className="flex items-center space-x-4 mb-4">
-        <button
-          onClick={saveSimulation}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          <Save size={20} className="inline-block mr-2" />
-          Save Simulation
-        </button>
-        <span className="text-gray-700">Portfolio Value: ${portfolioValue.toFixed(2)}</span>
+
+      {/* 7) Place Trade + "Traiding coAIch" side by side */}
+      <div className="flex flex-col md:flex-row md:space-x-6">
+        {/* Place Trade box */}
+        <div className="bg-white rounded-md p-4 shadow-sm flex flex-col max-w-sm mb-4 md:mb-0">
+          <h3 className="text-lg font-semibold mb-4">Place Trade</h3>
+
+          {/* Ticker: read-only from chartTicker */}
+          <label className="block text-sm font-medium text-gray-700 mb-1">Stock Ticker</label>
+          <input
+            readOnly
+            value={chartTicker}
+            className="rounded-md bg-green-50 py-2 px-4 text-gray-800 
+                       focus:outline-none focus:ring-2 focus:ring-green-200 mb-2"
+          />
+
+          {/* Current Price for tradeDate */}
+          {(() => {
+            const p = getPriceForTradeDate(tradeDate)
+            return (
+              <p className="text-sm text-gray-600 mb-2">
+                Current Price: {p > 0 ? `$${p.toFixed(2)}` : "N/A"}
+              </p>
+            )
+          })()}
+
+          {/* Trade Date */}
+          <label className="block text-sm font-medium text-gray-700 mb-1">Trade Date</label>
+          <input
+            type="date"
+            value={tradeDate}
+            onChange={(e) => setTradeDate(e.target.value)}
+            className="rounded-md bg-green-50 py-2 px-4 text-gray-800 
+                       focus:outline-none focus:ring-2 focus:ring-green-200 mb-2"
+          />
+
+          {/* Buy/Sell radio */}
+          <div className="flex items-center space-x-4 mb-2">
+            <label className="flex items-center text-sm text-gray-800">
+              <input
+                type="radio"
+                name="tradeType"
+                value="buy"
+                checked={tradeAction === "buy"}
+                onChange={() => setTradeAction("buy")}
+                className="mr-1"
+              />
+              Buy
+            </label>
+            <label className="flex items-center text-sm text-gray-800">
+              <input
+                type="radio"
+                name="tradeType"
+                value="sell"
+                checked={tradeAction === "sell"}
+                onChange={() => setTradeAction("sell")}
+                className="mr-1"
+              />
+              Sell
+            </label>
+          </div>
+
+          {/* Quantity */}
+          <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+          <input
+            type="number"
+            value={tradeQuantity}
+            onChange={(e) => setTradeQuantity(Number(e.target.value))}
+            className="rounded-md bg-green-50 py-2 px-4 text-gray-800 
+                       focus:outline-none focus:ring-2 focus:ring-green-200 mb-2"
+          />
+
+          {/* "Total Value" + Place Trade btn */}
+          {(() => {
+            const p = getPriceForTradeDate(tradeDate)
+            const tv = p * tradeQuantity
+            return (
+              <>
+                <p className="text-sm text-gray-800 font-medium mb-2">
+                  Total Value: ${tv.toFixed(2)}
+                </p>
+                <button
+                  onClick={placeTrade}
+                  className="w-full bg-green-500 text-white font-semibold py-2 
+                             rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 
+                             focus:ring-green-400"
+                >
+                  Place Trade (${tv.toFixed(2)})
+                </button>
+              </>
+            )
+          })()}
+        </div>
+
+        {/* Traiding coAIch box */}
+        <div className="bg-white rounded-md p-4 shadow-sm flex flex-col md:w-1/2">
+          <h3 className="text-lg font-semibold mb-2">
+            Traiding co
+            <span className="font-bold text-green-600">AI</span>
+            ch
+          </h3>
+          <div className="flex-1 overflow-y-auto space-y-3 mb-4 max-h-40">
+            <div className="bg-green-50 p-2 rounded-md">Feedback #1: Lorem ipsum...</div>
+            <div className="bg-green-50 p-2 rounded-md">Feedback #2: Lorem ipsum...</div>
+            <div className="bg-green-50 p-2 rounded-md">Feedback #3: Lorem ipsum...</div>
+          </div>
+          {/* “AI chat bot” input at bottom (no real logic) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ask AI</label>
+            <input
+              type="text"
+              placeholder="Type your question..."
+              className="w-full rounded-md bg-green-50 py-2 px-4 text-gray-800 
+                         focus:outline-none focus:ring-2 focus:ring-green-200 mb-2"
+            />
+            <button className="bg-green-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-600">
+              Send
+            </button>
+          </div>
+        </div>
       </div>
-      <div>
+
+      {/* Success toast */}
+      {showSuccessToast && (
+        <div className="fixed right-4 bottom-4 animate-slideInUp">
+          <div className="bg-green-500 text-white py-2 px-4 rounded shadow-lg">
+            Trade was successfully placed!
+          </div>
+        </div>
+      )}
+
+      {/* 8) Trade History Table */}
+      <div className="bg-white rounded-md p-4 shadow-sm">
         <h3 className="text-lg font-semibold mb-2">Trade History</h3>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#E8D8B2]">
-            <thead className="bg-[#F8F4E3]">
+          <table className="min-w-full divide-y divide-green-200">
+            <thead className="bg-green-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ticker</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Quantity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Price</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Action
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Ticker
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Quantity
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Trade Value
+                </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-[#E8D8B2]">
-              {trades.map((trade, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{trade.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{trade.action}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{trade.ticker}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{trade.quantity}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${trade.price.toFixed(2)}</td>
-                </tr>
-              ))}
+            <tbody className="bg-white divide-y divide-green-200">
+              {trades.map((t, idx) => {
+                const tv = t.quantity * t.price
+                return (
+                  <tr key={idx}>
+                    <td className="px-4 py-2 text-sm text-gray-700">{t.date}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">{t.action}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">{t.ticker}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">{t.quantity}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">${t.price.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">${tv.toFixed(2)}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -379,4 +711,3 @@ export function TradingSimulator() {
     </div>
   )
 }
-
