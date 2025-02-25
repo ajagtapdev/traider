@@ -1,140 +1,79 @@
-import OpenAI from "openai";
-import { Trade, Holding } from "@shared/schema";
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-const openai = new OpenAI();
+const openai = new OpenAI({
+  apiKey: process.env.NVIDIA_API_KEY,
+  baseURL: 'https://integrate.api.nvidia.com/v1',
+});
 
-interface AIFeedback {
-  feedback: string[];
-  confidence: number;
-  recommendations: string[];
-}
+const systemMessage = `You are a seasoned financial analyst who gives **honest, no-BS investment insights** like a real person would. Keep your responses **brief, direct, and actionable**—no fluff. 
 
-interface TradeAnalysis {
-  trade: Trade;
-  priceAtTime: number;
-  currentPrice: number;
-  percentageChange: number;
-  holdingDuration: number;
-}
+### How to respond:
+- Give a clear stance: If it's a great investment, say why. If it's overhyped, call it out.
+- Keep it brief: a simple summary is enough.
+- Highlight risks & rewards Be transparent about what could go wrong.
+- Use a conversational, real-person tone: Avoid sounding robotic or generic.
+- Be actionable: Recommend a clear course of action (buy, sell, hold).
 
-// Helper function to generate structured analysis prompts
-function generateAnalysisPrompt(tradeAnalysis: TradeAnalysis[], holdings: Holding[]) {
-  // Calculate portfolio metrics
-  const totalPortfolioValue = holdings.reduce((sum, h) => sum + (h.quantity * h.currentPrice), 0);
-  const positionSizes = holdings.map(h => ({
-    symbol: h.symbol,
-    percentage: ((h.quantity * h.currentPrice) / totalPortfolioValue) * 100
-  }));
+Example Format:
+Great Question! Here's my take: I think [stock] is a solid long-term bet because [reason 1], [reason 2], and [reason 3]. 
+At time X, [stock] was doing Y. However, [risk 1] is a major concern. Overall, I'd recommend [buy/sell/hold].
+I'd say its a solid long-term bet if you can stomach the valuation risk. Short-term, expect volatility.`
 
-  return [
-    {
-      role: "system",
-      content: `You are an expert quantitative trading analyst with deep expertise in:
-      - Technical analysis and market timing
-      - Risk management and position sizing
-      - Portfolio optimization and diversification
-      - Trading psychology and behavioral patterns
-      
-      Analyze trading decisions using these principles:
-      1. Compare entry/exit points against major market indicators
-      2. Evaluate position sizing relative to total portfolio value
-      3. Assess diversification across sectors and asset classes
-      4. Identify patterns in trading behavior and emotional decisions
-      5. Calculate risk-adjusted returns and Sharpe ratios where applicable
-      
-      Provide specific, data-driven feedback with numerical support.
-      Focus on actionable insights rather than general advice.
-      Consider both individual trade performance and portfolio-level impacts.`
-    },
-    {
-      role: "user",
-      content: `Perform a comprehensive trading analysis using this data:
-
-      Portfolio Metrics:
-      Total Portfolio Value: $${totalPortfolioValue.toFixed(2)}
-      Position Sizes: ${JSON.stringify(positionSizes, null, 2)}
-      
-      Trade History Analysis:
-      ${JSON.stringify(tradeAnalysis.map(t => ({
-        ...t,
-        roi: ((t.currentPrice - t.priceAtTime) / t.priceAtTime * 100).toFixed(2) + '%',
-        holdingPeriod: t.holdingDuration + ' days'
-      })), null, 2)}
-
-      Current Holdings:
-      ${JSON.stringify(holdings.map(h => ({
-        symbol: h.symbol,
-        quantity: h.quantity,
-        currentValue: (h.quantity * h.currentPrice).toFixed(2),
-        percentOfPortfolio: ((h.quantity * h.currentPrice) / totalPortfolioValue * 100).toFixed(2) + '%'
-      })), null, 2)}
-
-      Analyze:
-      1. Trade timing effectiveness (entry/exit points)
-      2. Position sizing strategy
-      3. Risk management practices
-      4. Portfolio diversification
-      5. Overall trading patterns
-
-      Required JSON Response Format:
-      {
-        "feedback": [
-          "Specific observation with numerical support",
-          "Pattern identification with concrete examples",
-          "Risk analysis with metrics"
-        ],
-        "confidence": "Number between 0-1 based on data quality",
-        "recommendations": [
-          "Actionable step with specific criteria",
-          "Risk management adjustment with target numbers",
-          "Portfolio rebalancing suggestion with percentages"
-        ]
-      }`
-    }
-  ];
-}
-
-export async function analyzeTrades(trades: Trade[], holdings: Holding[]): Promise<AIFeedback> {
+export async function POST(request: Request) {
   try {
-    // Enhanced trade analysis with additional metrics
-    const tradeAnalysis: TradeAnalysis[] = trades.map(trade => {
-      const currentHolding = holdings.find(h => h.symbol === trade.symbol);
-      const currentPrice = currentHolding?.currentPrice || trade.price;
-      const holdingDuration = Math.floor((Date.now() - new Date(trade.timestamp).getTime()) / (1000 * 60 * 60 * 24));
-      
-      return {
-        trade,
-        priceAtTime: trade.price,
-        currentPrice,
-        percentageChange: ((currentPrice - trade.price) / trade.price) * 100,
-        holdingDuration
-      };
+    const body = await request.json();
+    const { messages } = body;
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid messages in request body.' },
+        { status: 400 }
+      );
+    }
+
+    // Filter out any messages with empty content
+    const filteredMessages = messages.filter(
+      (msg: { role: string; content: string }) => msg.content.trim().length > 0
+    );
+
+    // Prepend the system message
+    const allMessages = [{ role: 'system', content: systemMessage }, ...filteredMessages];
+
+    // Request a streaming completion from the OpenAI-compatible API
+    const completion = await openai.chat.completions.create({
+      model: 'meta/llama-3.3-70b-instruct',
+      messages: allMessages,
+      temperature: 0.2,
+      top_p: 0.7,
+      max_tokens: 1024,
+      stream: true,
     });
 
-    const response = await openai.chat.completions.create({
-      model: "nvidia/llama-3.1-nemotron-70b-instruct",
-      messages: generateAnalysisPrompt(tradeAnalysis, holdings),
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-      max_tokens: 1024
+    // Create a ReadableStream to send back Server-Sent Events (SSE)
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of completion) {
+          const delta = chunk.choices?.[0]?.delta?.content;
+          if (delta) {
+            const sseFormatted = `data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(sseFormatted));
+          }
+        }
+        controller.close();
+      },
     });
 
-    const result = response.choices[0].message.content
-      ? JSON.parse(response.choices[0].message.content)
-      : { feedback: [], confidence: 0, recommendations: [] };
-
-    // Validate and normalize response
-    return {
-      feedback: result.feedback?.map(f => f.trim()) || [],
-      confidence: Math.max(0, Math.min(1, result.confidence || 0)),
-      recommendations: result.recommendations?.map(r => r.trim()) || []
-    };
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+      },
+    });
   } catch (error) {
-    console.error('Error analyzing trades:', error);
-    return {
-      feedback: ['Unable to analyze trades due to technical issues.'],
-      confidence: 0,
-      recommendations: ['Please try again later or contact support if the issue persists.']
-    };
+    console.error('Error generating financial analysis:', error);
+    return NextResponse.json(
+      { error: 'Error generating financial analysis.' },
+      { status: 500 }
+    );
   }
 }

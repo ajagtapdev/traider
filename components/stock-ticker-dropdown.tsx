@@ -59,7 +59,7 @@ export function StockTickerDropdown({ onSelect }: StockTickerDropdownProps) {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 rounded-md bg-white/50 py-2 px-3 text-gray-700 hover:bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
+        className="flex items-center space-x-2 rounded-md bg-green-50 py-2 px-3 text-gray-700 hover:bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#E8D8B2]"
       >
         <span>{selectedTicker ? selectedTicker.symbol : "Select Ticker"}</span>
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">

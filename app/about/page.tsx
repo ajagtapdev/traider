@@ -29,7 +29,7 @@ const staggerChildren = {
 export default function About() {
   return (
     <div className="min-h-screen bg-[#FDF6E9]">
-      <Header />
+      <Header/>
       <main className="container mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -37,7 +37,10 @@ export default function About() {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-5xl font-bold text-gray-900 mb-4 text-center">
-            About traider
+            About tr
+            <span className="text-[#509048]">a</span>
+            <span className="text-[#509048]">i</span>
+            der
           </h1>
           <p className="text-xl text-gray-600 mb-12 text-center max-w-3xl mx-auto">
             Empowering traders with cutting-edge technology and unparalleled
@@ -62,7 +65,7 @@ export default function About() {
               knowledge, anyone can become a successful trader.
             </p>
             <Link href="/simulator">
-              <Button className="bg-[#4ADE80] hover:bg-[#4ADE80]/90 text-white">
+              <Button className="bg-[#509048] hover:bg-[#509048]/90 text-white">
                 Try Our Simulator <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -75,20 +78,20 @@ export default function About() {
               Key Statistics
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-[#FDA4AF]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#FDA4AF]">100K+</p>
+              <div className="text-center p-4 bg-[#80b048]/10 rounded-lg">
+                <p className="text-4xl font-bold text-[#80b048]">100K+</p>
                 <p className="text-sm text-gray-600">Active Users</p>
               </div>
-              <div className="text-center p-4 bg-[#4ADE80]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#4ADE80]">$500M+</p>
+              <div className="text-center p-4 bg-[#509048]/10 rounded-lg">
+                <p className="text-4xl font-bold text-[#509048]">$500M+</p>
                 <p className="text-sm text-gray-600">Trading Volume</p>
               </div>
-              <div className="text-center p-4 bg-blue-100 rounded-lg">
-                <p className="text-4xl font-bold text-blue-500">24/7</p>
+              <div className="text-center p-4 bg-[#509048]/10 rounded-lg">
+                <p className="text-4xl font-bold text-[#509048]">24/7</p>
                 <p className="text-sm text-gray-600">Support</p>
               </div>
-              <div className="text-center p-4 bg-yellow-100 rounded-lg">
-                <p className="text-4xl font-bold text-yellow-500">50+</p>
+              <div className="text-center p-4 bg-[#80b048]/10 rounded-lg">
+                <p className="text-4xl font-bold text-[#80b048]">5+</p>
                 <p className="text-sm text-gray-600">Trading Tools</p>
               </div>
             </div>
@@ -124,7 +127,7 @@ export default function About() {
               {
                 icon: BookOpen,
                 title: "Educational Resources",
-                description: "Comprehensive guides and webinars",
+                description: "24/7 AI trading assistant",
               },
             ].map((feature, index) => (
               <motion.div
@@ -133,7 +136,7 @@ export default function About() {
                 whileHover={{ y: -5 }}
                 variants={fadeIn}
               >
-                <feature.icon className="h-12 w-12 text-[#4ADE80] mb-4" />
+                <feature.icon className="h-12 w-12 text-[#509048] mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   {feature.title}
                 </h3>
@@ -160,7 +163,7 @@ export default function About() {
           </p>
           <div className="flex justify-center">
             <Link href="/">
-              <Button className="bg-[#FDA4AF] hover:bg-[#FDA4AF]/90 text-white">
+              <Button className="bg-[#408830] hover:bg-[#408830]/90 text-white">
                 Start Your Journey
               </Button>
             </Link>
