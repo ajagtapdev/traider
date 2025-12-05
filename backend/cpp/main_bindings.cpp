@@ -73,7 +73,13 @@ PYBIND11_MODULE(traider_cpp, m) {
         .def(py::init<>()) // Default constructor
         .def_readwrite("total_return", &traider::portfolio::PortfolioMetrics::total_return)
         .def_readwrite("sharpe_ratio", &traider::portfolio::PortfolioMetrics::sharpe_ratio)
-        .def_readwrite("max_drawdown", &traider::portfolio::PortfolioMetrics::max_drawdown);
+        .def_readwrite("sortino_ratio", &traider::portfolio::PortfolioMetrics::sortino_ratio)
+        .def_readwrite("max_drawdown", &traider::portfolio::PortfolioMetrics::max_drawdown)
+        .def_readwrite("volatility", &traider::portfolio::PortfolioMetrics::volatility);
+
+    m_backtest.def("calculate_metrics", &traider::portfolio::PortfolioAnalytics::calculate_metrics,
+        "Calculate portfolio metrics from equity curve",
+        py::arg("equity_curve"), py::arg("risk_free_rate") = 0.02);
 
     py::class_<traider::backtesting::BacktestResult>(m_backtest, "BacktestResult")
         .def(py::init<>()) // Default constructor

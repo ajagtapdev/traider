@@ -10,22 +10,20 @@ const menuItems = [
   { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
 ];
 
-export function Sidebar() {
+
+export interface PortfolioMetrics {
+  total_return: number;
+  sharpe_ratio: number;
+  sortino_ratio: number;
+  max_drawdown: number;
+  volatility: number;
+}
+
+export function Sidebar({ metrics }: { metrics?: PortfolioMetrics | null }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const portfolioData = null;
 
-  // In a real app, you'd fetch this from your backend / API
-  // For now, we'll keep it null to show the "No trades" state unless populated
-  // Example fetch:
-  // useEffect(() => {
-  //   fetch('/api/portfolio')
-  //     .then(res => res.json())
-  //     .then(data => setPortfolioData(data))
-  //     .catch(err => console.error(err));
-  // }, []);
-
-  const hasData = portfolioData !== null;
+  const hasData = !!metrics;
 
   return (
     <motion.div
@@ -84,9 +82,25 @@ export function Sidebar() {
                 </div>
               ) : (
                 <div className="grid gap-6 md:grid-cols-2">
-                   {/* Charts would go here when data is connected */}
                    <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
-                      <p>Portfolio data loaded...</p>
+                      <h3 className="text-sm font-semibold text-gray-600">Sharpe Ratio</h3>
+                      <p className="text-2xl font-bold text-[#408830]">{metrics?.sharpe_ratio.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500 mt-1">Risk-adjusted return</p>
+                   </div>
+                   <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
+                      <h3 className="text-sm font-semibold text-gray-600">Max Drawdown</h3>
+                      <p className="text-2xl font-bold text-red-600">{(metrics?.max_drawdown! * 100).toFixed(2)}%</p>
+                      <p className="text-xs text-gray-500 mt-1">Maximum loss from peak</p>
+                   </div>
+                   <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
+                      <h3 className="text-sm font-semibold text-gray-600">Volatility</h3>
+                      <p className="text-2xl font-bold text-gray-800">{(metrics?.volatility! * 100).toFixed(2)}%</p>
+                      <p className="text-xs text-gray-500 mt-1">Annualized std dev</p>
+                   </div>
+                   <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
+                      <h3 className="text-sm font-semibold text-gray-600">Sortino Ratio</h3>
+                      <p className="text-2xl font-bold text-[#408830]">{metrics?.sortino_ratio.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500 mt-1">Downside risk-adjusted</p>
                    </div>
                 </div>
               )}

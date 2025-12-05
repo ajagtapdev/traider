@@ -235,6 +235,37 @@ def get_technical_indicators(request: TechnicalIndicatorsRequest):
         print(f"Error in technical-indicators: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+class PortfolioMetricsRequest(BaseModel):
+    equity_curve: List[float]
+    risk_free_rate: float = 0.02
+
+@app.post("/calculate-metrics")
+def calculate_metrics(request: PortfolioMetricsRequest):
+    """
+    Calculate portfolio metrics (Sharpe, Sortino, Drawdown) using C++ engine.
+    """
+    if not CPP_AVAILABLE:
+        raise HTTPException(status_code=501, detail="C++ extension not available")
+    
+    try:
+        # Check if calculate_metrics exists (in case of old DLL loaded)
+        if not hasattr(traider_cpp.backtesting, "calculate_metrics"):
+             # Fallback or error? Let's error to prompt restart
+             raise HTTPException(status_code=503, detail="C++ extension outdated. Please restart server to load new bindings.")
+
+        metrics = traider_cpp.backtesting.calculate_metrics(request.equity_curve, request.risk_free_rate)
+        
+        return {
+            "total_return": metrics.total_return,
+            "sharpe_ratio": metrics.sharpe_ratio,
+            "sortino_ratio": metrics.sortino_ratio,
+            "max_drawdown": metrics.max_drawdown,
+            "volatility": metrics.volatility
+        }
+    except Exception as e:
+        print(f"Error in calculate-metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 class TradeAnalysisRequest(BaseModel):
     ticker: str
     buy_date: str

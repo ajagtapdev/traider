@@ -30,6 +30,7 @@ import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
 import Contexts from "./Contexts"
 import { supabase } from "@/lib/supabaseClient"
+import { PortfolioMetrics } from "./sidebar"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -72,7 +73,11 @@ function fmt(d: Date) {
   return d.toISOString().split("T")[0]
 }
 
-export default function TradingSimulator({ guestId, userId }: { guestId: string, userId: string | null }) {
+export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: { 
+  guestId: string, 
+  userId: string | null,
+  onMetricsUpdate?: (metrics: PortfolioMetrics) => void 
+}) {
   // --------------------------------------
   // 1) Setup Simulation Modal
   // --------------------------------------
@@ -130,6 +135,30 @@ export default function TradingSimulator({ guestId, userId }: { guestId: string,
 
   // Load existing trades from Supabase
   const [hasLoadedTrades, setHasLoadedTrades] = useState(false);
+
+  // C++ Metrics Calculation Effect
+  useEffect(() => {
+    if (!onMetricsUpdate || portfolioHistory.length < 5) return
+
+    const timer = setTimeout(() => {
+      const equityCurve = portfolioHistory.map(p => p.value)
+      
+      fetch('http://localhost:8000/calculate-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equity_curve: equityCurve })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.sharpe_ratio !== undefined) {
+          onMetricsUpdate(data)
+        }
+      })
+      .catch(err => console.error("Metrics calc failed", err))
+    }, 1000) // Debounce 1s
+
+    return () => clearTimeout(timer)
+  }, [portfolioHistory, onMetricsUpdate])
 
   useEffect(() => {
     if (!userId || hasLoadedTrades) return;
