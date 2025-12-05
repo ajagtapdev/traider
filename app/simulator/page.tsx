@@ -6,7 +6,7 @@ import TradingSimulator from "@/components/trading-simulator";
 import { useGuestUser } from "@/hooks/useGuestUser";
 
 const Simulator = () => {
-  const { guestId, isLoaded } = useGuestUser();
+  const { guestId, userId, isLoaded } = useGuestUser();
 
   if (!isLoaded) {
     return <div className="min-h-screen flex items-center justify-center bg-[#FDF6E9]">Loading...</div>;
@@ -18,7 +18,7 @@ const Simulator = () => {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-6">
-          <TradingSimulator guestId={guestId!} />
+          <TradingSimulator guestId={guestId!} userId={userId} />
         </main>
       </div>
     </div>

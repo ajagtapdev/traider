@@ -29,8 +29,7 @@ import {
 import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
 import Contexts from "./Contexts"
-import { useMutation, useQuery } from "convex/react"
-import { api } from "@/convex/_generated/api"
+import { supabase } from "@/lib/supabaseClient"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -73,7 +72,7 @@ function fmt(d: Date) {
   return d.toISOString().split("T")[0]
 }
 
-export default function TradingSimulator({ guestId }: { guestId: string }) {
+export default function TradingSimulator({ guestId, userId }: { guestId: string, userId: string | null }) {
   // --------------------------------------
   // 1) Setup Simulation Modal
   // --------------------------------------
@@ -129,27 +128,52 @@ export default function TradingSimulator({ guestId }: { guestId: string }) {
   // The trade date is always the current date, in "YYYY-MM-DD"
   const tradeDate = fmt(currentDate)
 
-  const addTradeMutation = useMutation(api.functions.trade.addTrade);
-  const existingTrades = useQuery(api.functions.trade.getTrades, { tokenIdentifier: guestId });
+  // Load existing trades from Supabase
   const [hasLoadedTrades, setHasLoadedTrades] = useState(false);
 
   useEffect(() => {
-    if (existingTrades && !hasLoadedTrades && existingTrades.length > 0) {
-      // Map convex trades to local format if needed or just replace
-      // The types might slightly differ (id vs _id)
-      const mappedTrades: Trade[] = existingTrades.map(t => ({
-        date: t.date,
-        ticker: t.ticker,
-        quantity: t.quantity,
-        price: t.price,
-        action: t.action as "buy" | "sell"
-      })).reverse(); // specific sort order might be needed
-      
-      setTrades(mappedTrades);
-      setHasLoadedTrades(true);
-      setShowSetup(false); // Assume if trades exist, setup is done
+    if (!userId || hasLoadedTrades) return;
+
+    const fetchTrades = async () => {
+        const { data, error } = await supabase
+            .from('trades')
+            .select('*')
+            .eq('user_id', userId)
+            .order('date', { ascending: false }); // Convex logic was .order("desc") which means latest first? 
+
+        // Convex logic: 
+        // return await ctx.db.query("trade")...order("desc").collect();
+        // and in client: existingTrades.map(...).reverse()
+        // If we order by date desc, latest trade is first. 
+        // The map().reverse() suggests the state `trades` expects chronological order (oldest first)?
+        // Let's assume we want chronological order for simulation replay.
+        
+        if (error) {
+            console.error("Error fetching trades:", error);
+            return;
+        }
+
+        if (data && data.length > 0) {
+             const mappedTrades: Trade[] = data.map(t => ({
+                date: t.date,
+                ticker: t.ticker,
+                quantity: t.quantity,
+                price: t.price,
+                action: t.action as "buy" | "sell"
+             }));
+             
+             // If Convex returned desc (newest first) and we reversed it, we got oldest first.
+             // If we select from Supabase desc, we get newest first. So we should reverse it too.
+             // Or just select asc.
+             
+             // Let's stick to previous logic: data is desc, so reverse it.
+             setTrades(mappedTrades.reverse());
+             setHasLoadedTrades(true);
+             setShowSetup(false);
+        }
     }
-  }, [existingTrades, hasLoadedTrades]);
+    fetchTrades();
+  }, [userId, hasLoadedTrades]);
 
 
   // If user changes the sim config, reset the current date/trades
@@ -376,15 +400,21 @@ export default function TradingSimulator({ guestId }: { guestId: string }) {
     setTrades([...trades, newTrade])
     
     // Persist to backend
-    addTradeMutation({
-      tokenIdentifier: guestId,
-      date: newTrade.date,
-      action: newTrade.action,
-      ticker: newTrade.ticker,
-      quantity: newTrade.quantity,
-      price: newTrade.price,
-      tv: cPrice * tradeQuantity
-    }).catch(err => console.error("Failed to save trade:", err));
+    if (userId) {
+        supabase.from('trades').insert({
+            user_id: userId,
+            date: newTrade.date,
+            action: newTrade.action,
+            ticker: newTrade.ticker,
+            quantity: newTrade.quantity,
+            price: newTrade.price,
+            tv: cPrice * tradeQuantity
+        }).then(({ error }) => {
+            if (error) console.error("Failed to save trade:", error);
+        });
+    } else {
+        console.error("No userId found, cannot save trade");
+    }
 
     setShowSuccessToast(true)
     setTimeout(() => setShowSuccessToast(false), 2000)
