@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion } from "framer-motion"
 import {
   CartesianGrid,
@@ -287,7 +287,7 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
     if (stockData.length > 0) {
         buildPortfolioHistory()
     }
-  }, [currentDate, trades, stockData])
+  }, [currentDate, trades, stockData, buildPortfolioHistory])
 
   /**
    * Return the "last known price" for chartTicker on a given date string
@@ -309,7 +309,7 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
    * For all trades on/before `dateStr`, compute how many shares we own
    * and how much net capital is left from the startingCapital.
    */
-  function computePositionAndCapital(dateStr: string) {
+  const computePositionAndCapital = useCallback((dateStr: string) => {
     let shares = 0
     let netSpent = 0
     // Sum up all trades that occurred on or before dateStr
@@ -327,13 +327,13 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
     }
     const leftoverCash = startingCapital - netSpent
     return { shares, leftoverCash }
-  }
+  }, [trades, chartTicker, startingCapital])
 
   /**
    * Build a daily portfolio array from the startDate up to currentDate,
    * using the stock's daily price & trades that happened on each day.
    */
-  function buildPortfolioHistory() {
+  const buildPortfolioHistory = useCallback(() => {
     const history: { date: string; value: number }[] = []
     
     // Instead of iterating every calendar day, let's iterate over the available stock data points
@@ -362,7 +362,7 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
     }
     
     setPortfolioHistory(history)
-  }
+  }, [stockData, startDate, currentDate, startingCapital, computePositionAndCapital])
 
   // --------------------------------------
   // 5) Time Travel
@@ -494,7 +494,7 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const lastAnalyzedTradeRef = useRef<string>("")
 
-  const sendPrompt = async (prompt: string) => {
+  const sendPrompt = useCallback(async (prompt: string) => {
     const userMessage: Message = { role: "user", content: prompt }
     setChatLog((prev) => [...prev, userMessage])
     setChatLoading(true)
@@ -556,7 +556,7 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
     } finally {
       setChatLoading(false)
     }
-  }
+  }, [])
 
   const handleSend = async () => {
     if (!chatInput.trim()) return
@@ -575,7 +575,7 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
       sendPrompt(prompt)
       lastAnalyzedTradeRef.current = newTrade.date
     }
-  }, [newTrade])
+  }, [newTrade, sendPrompt])
 
   // --------------------------------------
   // RENDER

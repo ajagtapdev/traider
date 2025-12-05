@@ -84,22 +84,22 @@ export function Sidebar({ metrics }: { metrics?: PortfolioMetrics | null }) {
                 <div className="grid gap-6 md:grid-cols-2">
                    <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
                       <h3 className="text-sm font-semibold text-gray-600">Sharpe Ratio</h3>
-                      <p className="text-2xl font-bold text-[#408830]">{metrics?.sharpe_ratio.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-[#408830]">{(metrics?.sharpe_ratio ?? 0).toFixed(2)}</p>
                       <p className="text-xs text-gray-500 mt-1">Risk-adjusted return</p>
                    </div>
                    <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
                       <h3 className="text-sm font-semibold text-gray-600">Max Drawdown</h3>
-                      <p className="text-2xl font-bold text-red-600">{(metrics?.max_drawdown! * 100).toFixed(2)}%</p>
+                      <p className="text-2xl font-bold text-red-600">{((metrics?.max_drawdown ?? 0) * 100).toFixed(2)}%</p>
                       <p className="text-xs text-gray-500 mt-1">Maximum loss from peak</p>
                    </div>
                    <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
                       <h3 className="text-sm font-semibold text-gray-600">Volatility</h3>
-                      <p className="text-2xl font-bold text-gray-800">{(metrics?.volatility! * 100).toFixed(2)}%</p>
+                      <p className="text-2xl font-bold text-gray-800">{((metrics?.volatility ?? 0) * 100).toFixed(2)}%</p>
                       <p className="text-xs text-gray-500 mt-1">Annualized std dev</p>
                    </div>
                    <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
                       <h3 className="text-sm font-semibold text-gray-600">Sortino Ratio</h3>
-                      <p className="text-2xl font-bold text-[#408830]">{metrics?.sortino_ratio.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-[#408830]">{(metrics?.sortino_ratio ?? 0).toFixed(2)}</p>
                       <p className="text-xs text-gray-500 mt-1">Downside risk-adjusted</p>
                    </div>
                 </div>
