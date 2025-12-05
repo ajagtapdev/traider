@@ -201,7 +201,7 @@ export default function TradingSimulator({ guestId, userId }: { guestId: string,
     // Actually, simply fetching from StartDate to CurrentDate is safest for consistency.
     // If the window is huge (5y) and start date is recent, we need to go back 5y.
     
-    let fetchStart = startDate < addDays(currentDate, -daysWindow) ? startDate : addDays(currentDate, -daysWindow)
+    const fetchStart = startDate < addDays(currentDate, -daysWindow) ? startDate : addDays(currentDate, -daysWindow)
     
     // Ensure we don't go into the future for the fetch end date relative to real wall clock, 
     // although our API handles "future" by clamping to today.

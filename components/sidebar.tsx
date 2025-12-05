@@ -1,40 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Trophy, Menu, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  CartesianGrid,
-} from "recharts";
 
 const menuItems = [
   { icon: Home, label: "Trading Simulator", path: "/" },
   { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
 ];
 
-const PIE_COLORS = [
-  "rgba(16, 138, 53, 0.6)",
-  "rgba(30, 201, 135, 0.6)",
-  "rgba(103, 230, 83, 0.6)",
-  "rgba(0, 255, 4, 0.39)",
-];
-
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const [portfolioData, setPortfolioData] = useState<any>(null);
+  const portfolioData = null;
 
   // In a real app, you'd fetch this from your backend / API
   // For now, we'll keep it null to show the "No trades" state unless populated
