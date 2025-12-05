@@ -283,12 +283,6 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
   //    whenever "currentDate" or "trades" changes
   // -------------------------------------------
 
-  useEffect(() => {
-    if (stockData.length > 0) {
-        buildPortfolioHistory()
-    }
-  }, [currentDate, trades, stockData, buildPortfolioHistory])
-
   /**
    * Return the "last known price" for chartTicker on a given date string
    * using the fetched stockData. If none found, returns the last available price before that date, or 0.
@@ -363,6 +357,12 @@ export default function TradingSimulator({ guestId, userId, onMetricsUpdate }: {
     
     setPortfolioHistory(history)
   }, [stockData, startDate, currentDate, startingCapital, computePositionAndCapital])
+
+  useEffect(() => {
+    if (stockData.length > 0) {
+        buildPortfolioHistory()
+    }
+  }, [currentDate, trades, stockData, buildPortfolioHistory])
 
   // --------------------------------------
   // 5) Time Travel
