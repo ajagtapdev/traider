@@ -1,0 +1,19 @@
+# Ignore frontend code for language statistics
+app/** linguist-vendored
+components/** linguist-vendored
+convex/** linguist-vendored
+hooks/** linguist-vendored
+lib/** linguist-vendored
+public/** linguist-vendored
+
+# Ignore specific frontend file types globally just in case
+*.ts linguist-vendored
+*.tsx linguist-vendored
+*.js linguist-vendored
+*.css linguist-vendored
+*.json linguist-vendored
+
+# Ensure C++ is detected correctly
+*.cpp linguist-detectable
+*.h linguist-detectable
+
