@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { rateLimit } from '@/lib/rate-limit';
 
 const openai = new OpenAI({
   apiKey: process.env.NVIDIA_API_KEY,
@@ -18,10 +19,18 @@ const systemMessage = `You are a seasoned financial analyst who gives **honest, 
 Example Format:
 Great Question! Here's my take: I think [stock] is a solid long-term bet because [reason 1], [reason 2], and [reason 3]. 
 At time X, [stock] was doing Y. However, [risk 1] is a major concern. Overall, I'd recommend [buy/sell/hold].
-I'd say its a solid long-term bet if you can stomach the valuation risk. Short-term, expect volatility.`
+I'd say its a solid long-term bet if you can stomach the valuation risk. Short-term, expect volatility.`;
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
+    if (!rateLimit(ip, 10, 60000)) { // 10 requests per minute
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { messages } = body;
     if (!messages || !Array.isArray(messages)) {

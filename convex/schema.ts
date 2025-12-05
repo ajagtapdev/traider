@@ -27,7 +27,7 @@ const schema = defineSchema({
     quantity: v.number(),
     price: v.number(),
     tv: v.number(),
-  })
+  }).index("by_user", ["userId"])
 });
 
 export default schema;

@@ -29,7 +29,8 @@ import {
 import { ChevronRight, FastForward, Calendar } from "lucide-react"
 import { StockTickerDropdown } from "./stock-ticker-dropdown"
 import Contexts from "./Contexts"
-// Removed: import Chatbot from "./chatbot"
+import { useMutation, useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 
 /** Mapping of time-window label => # of days to fetch in the chart. */
 const TIME_WINDOW_OPTIONS = {
@@ -72,12 +73,13 @@ function fmt(d: Date) {
   return d.toISOString().split("T")[0]
 }
 
-export default function TradingSimulator() {
+export default function TradingSimulator({ guestId }: { guestId: string }) {
   // --------------------------------------
   // 1) Setup Simulation Modal
   // --------------------------------------
   const [showSetup, setShowSetup] = useState(true)
-  const [tempStartDate, setTempStartDate] = useState("2010-01-01")
+  // Default to a recent start date to ensure data availability
+  const [tempStartDate, setTempStartDate] = useState("2023-01-01") 
   const [tempDuration, setTempDuration] = useState(6)
   const [tempCapital, setTempCapital] = useState(10000)
   const [errorMsg, setErrorMsg] = useState("")
@@ -87,8 +89,11 @@ export default function TradingSimulator() {
     const simEnd = addDays(userStart, tempDuration * 30)
     const today = new Date()
     if (simEnd > today) {
-      setErrorMsg("End date exceeds today's date. Please choose a shorter duration or earlier start.")
-      return
+      // It's actually fine to simulate up to today or slightly past if we just stop fetching data
+      // But let's warn if it's way in the future. 
+      // For now, let's allow it but clamp data fetching.
+      // setErrorMsg("End date exceeds today's date. Please choose a shorter duration or earlier start.")
+      // return
     }
     // Set real sim state
     setStartDate(userStart)
@@ -102,7 +107,7 @@ export default function TradingSimulator() {
   // --------------------------------------
   // 2) Core Sim State
   // --------------------------------------
-  const [startDate, setStartDate] = useState(new Date("2010-01-01"))
+  const [startDate, setStartDate] = useState(new Date("2023-01-01"))
   const [simulationDurationMonths, setSimulationDurationMonths] = useState(6)
   const [startingCapital, setStartingCapital] = useState(10000)
 
@@ -124,6 +129,29 @@ export default function TradingSimulator() {
   // The trade date is always the current date, in "YYYY-MM-DD"
   const tradeDate = fmt(currentDate)
 
+  const addTradeMutation = useMutation(api.functions.trade.addTrade);
+  const existingTrades = useQuery(api.functions.trade.getTrades, { tokenIdentifier: guestId });
+  const [hasLoadedTrades, setHasLoadedTrades] = useState(false);
+
+  useEffect(() => {
+    if (existingTrades && !hasLoadedTrades && existingTrades.length > 0) {
+      // Map convex trades to local format if needed or just replace
+      // The types might slightly differ (id vs _id)
+      const mappedTrades: Trade[] = existingTrades.map(t => ({
+        date: t.date,
+        ticker: t.ticker,
+        quantity: t.quantity,
+        price: t.price,
+        action: t.action as "buy" | "sell"
+      })).reverse(); // specific sort order might be needed
+      
+      setTrades(mappedTrades);
+      setHasLoadedTrades(true);
+      setShowSetup(false); // Assume if trades exist, setup is done
+    }
+  }, [existingTrades, hasLoadedTrades]);
+
+
   // If user changes the sim config, reset the current date/trades
   useEffect(() => {
     setCurrentDate(startDate)
@@ -136,17 +164,47 @@ export default function TradingSimulator() {
   useEffect(() => {
     if (showSetup) return // not started yet
 
-    const days = TIME_WINDOW_OPTIONS[timeWindow]
-    const windowStart = addDays(currentDate, -days)
-    const startStr = fmt(windowStart)
+    // We want to fetch enough data to cover the current view window
+    // PLUS enough history to support portfolio calculations if we were doing them properly back to start.
+    // For simplicity, let's fetch from (CurrentDate - TimeWindow) to CurrentDate.
+    // BUT, for the "Portfolio Value" chart which tracks history from StartDate, we really need data from StartDate.
+    
+    // Strategy: Fetch data from StartDate to CurrentDate (or slightly future if needed for buffer)
+    // This allows both charts to work.
+    
+    const daysWindow = TIME_WINDOW_OPTIONS[timeWindow]
+    // Start fetching from the beginning of the simulation OR the window start, whichever is earlier.
+    // Actually, simply fetching from StartDate to CurrentDate is safest for consistency.
+    // If the window is huge (5y) and start date is recent, we need to go back 5y.
+    
+    let fetchStart = startDate < addDays(currentDate, -daysWindow) ? startDate : addDays(currentDate, -daysWindow)
+    
+    // Ensure we don't go into the future for the fetch end date relative to real wall clock, 
+    // although our API handles "future" by clamping to today.
+    // However, our backend API takes startDate and endDate string.
+    
+    const startStr = fmt(fetchStart)
     const endStr = fmt(currentDate)
 
     async function fetchData() {
       try {
+        console.log(`Fetching stock data for ${chartTicker} from ${startStr} to ${endStr}`)
         const res = await fetch(`/api/stock-data?ticker=${chartTicker}&startDate=${startStr}&endDate=${endStr}`)
+        
+        if (!res.ok) {
+             console.error("Stock data fetch failed:", res.status, res.statusText)
+             return
+        }
+        
         const raw = await res.json()
+        if (!Array.isArray(raw)) {
+            console.error("Stock data is not an array:", raw)
+            setStockData([])
+            return
+        }
+
         const parsed: StockRow[] = raw.map((r: any) => ({
-          date: r.date,
+          date: r.date.split("T")[0], // Ensure YYYY-MM-DD
           open: +r.open,
           high: +r.high,
           low: +r.low,
@@ -154,16 +212,18 @@ export default function TradingSimulator() {
           adjclose: +r.adjclose,
           volume: +r.volume,
         }))
-        // Filter out anything beyond current date
-        const filtered = parsed.filter((row) => row.date <= endStr)
-        setStockData(filtered)
+        
+        // Sort by date ascending just in case
+        parsed.sort((a, b) => a.date.localeCompare(b.date))
+        
+        setStockData(parsed)
       } catch (err) {
         console.error("Error fetching stock data:", err)
         setStockData([])
       }
     }
     fetchData()
-  }, [chartTicker, currentDate, timeWindow, showSetup])
+  }, [chartTicker, currentDate, timeWindow, showSetup, startDate])
 
   // -------------------------------------------
   // 4) Rebuild the daily portfolio from start->current
@@ -171,18 +231,25 @@ export default function TradingSimulator() {
   // -------------------------------------------
 
   useEffect(() => {
-    buildPortfolioHistory()
+    if (stockData.length > 0) {
+        buildPortfolioHistory()
+    }
   }, [currentDate, trades, stockData])
 
   /**
    * Return the "last known price" for chartTicker on a given date string
-   * using the fetched stockData. If none found, returns 0.
+   * using the fetched stockData. If none found, returns the last available price before that date, or 0.
    */
   function getPriceForDate(dateStr: string) {
-    // Filter for rows <= that date
-    const relevant = stockData.filter((row) => row.date <= dateStr)
-    if (!relevant.length) return 0
-    return relevant[relevant.length - 1].price
+    // We can optimize this by using the sorted nature of stockData
+    // Find the row with date <= dateStr
+    // Since stockData is sorted ascending:
+    let bestPrice = 0
+    for (let i = 0; i < stockData.length; i++) {
+        if (stockData[i].date > dateStr) break;
+        bestPrice = stockData[i].price
+    }
+    return bestPrice
   }
 
   /**
@@ -215,18 +282,32 @@ export default function TradingSimulator() {
    */
   function buildPortfolioHistory() {
     const history: { date: string; value: number }[] = []
-    let d = new Date(startDate.getTime())
-
-    // Loop day by day up to currentDate
-    while (d <= currentDate) {
-      const ds = fmt(d) // 'YYYY-MM-DD'
-      const { shares, leftoverCash } = computePositionAndCapital(ds)
-      const price = getPriceForDate(ds)
-      const dailyValue = leftoverCash + shares * price
-      history.push({ date: ds, value: dailyValue })
-
-      d = addDays(d, 1)
+    
+    // Instead of iterating every calendar day, let's iterate over the available stock data points
+    // This is much faster and ensures we have prices.
+    // However, we must also include days where trades happened if they aren't in stock data (unlikely for market days).
+    
+    // Filter stockData to be within Simulation Start and Current Date
+    const relevantData = stockData.filter(d => d.date >= fmt(startDate) && d.date <= fmt(currentDate))
+    
+    if (relevantData.length === 0) {
+        // Fallback: just show start and end if no data
+        history.push({ date: fmt(startDate), value: startingCapital })
+        if (startDate < currentDate) {
+             history.push({ date: fmt(currentDate), value: startingCapital })
+        }
+        setPortfolioHistory(history)
+        return
     }
+
+    for (const row of relevantData) {
+        const ds = row.date
+        const { shares, leftoverCash } = computePositionAndCapital(ds)
+        const price = row.price
+        const dailyValue = leftoverCash + (shares * price)
+        history.push({ date: ds, value: dailyValue })
+    }
+    
     setPortfolioHistory(history)
   }
 
@@ -236,10 +317,13 @@ export default function TradingSimulator() {
   function fastForward(days: number) {
     const newDt = addDays(currentDate, days)
     const simEnd = addDays(startDate, simulationDurationMonths * 30)
+    // Allow going up to simEnd
     if (newDt <= simEnd) {
       setCurrentDate(newDt)
     } else {
-      alert("Cannot exceed simulation end date.")
+      // If adding days exceeds, just clamp to end? Or warn.
+      // Let's clamp to simEnd for better UX
+      setCurrentDate(simEnd)
     }
   }
 
@@ -281,13 +365,27 @@ export default function TradingSimulator() {
       }
     }
     // Add trade
-    setTrades([...trades, {
+    const newTrade: Trade = {
       date: tradeDate,
       ticker: chartTicker,
       quantity: tradeQuantity,
       price: cPrice,
       action: tradeAction
-    }])
+    }
+
+    setTrades([...trades, newTrade])
+    
+    // Persist to backend
+    addTradeMutation({
+      tokenIdentifier: guestId,
+      date: newTrade.date,
+      action: newTrade.action,
+      ticker: newTrade.ticker,
+      quantity: newTrade.quantity,
+      price: newTrade.price,
+      tv: cPrice * tradeQuantity
+    }).catch(err => console.error("Failed to save trade:", err));
+
     setShowSuccessToast(true)
     setTimeout(() => setShowSuccessToast(false), 2000)
   }
@@ -501,7 +599,7 @@ export default function TradingSimulator() {
               <div>
                 <p className="text-sm text-gray-500">Current Cash</p>
                 <p className="text-2xl font-bold text-[#509048]">
-                  ${computePositionAndCapital(fmt(currentDate)).leftoverCash.toFixed(2)}
+                  ${computePositionAndCapital(fmt(currentDate)).leftoverCash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -583,11 +681,8 @@ export default function TradingSimulator() {
               tickFormatter={(val) => String(val)}
             />
             <YAxis
-              domain={[
-                (dataMin: number) => Math.floor(dataMin / 100) * 100 - 50,
-                (dataMax: number) => Math.ceil(dataMax / 100) * 100 + 50,
-              ]}
-              tickFormatter={(val: number) => `${Math.round(val / 100) * 100}`}
+              domain={['auto', 'auto']}
+              tickFormatter={(val: number) => `$${Math.round(val)}`}
               label={{
                 value: "Portfolio Value",
                 angle: -90,
@@ -598,7 +693,7 @@ export default function TradingSimulator() {
               tick={{ dx: 10, dy: 5 }}
             />
             <Tooltip content={portfolioTooltipContent} />
-            <Line type="monotone" dataKey="value" stroke="#509048" strokeWidth={2} />
+            <Line type="monotone" dataKey="value" stroke="#509048" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -640,6 +735,7 @@ export default function TradingSimulator() {
               }}
             />
             <YAxis
+              domain={['auto', 'auto']}
               label={{
                 value: "Price",
                 angle: -90,
@@ -648,7 +744,7 @@ export default function TradingSimulator() {
               }}
             />
             <Tooltip content={stockTooltipContent} />
-            <Line type="monotone" dataKey="price" stroke="#408830" strokeWidth={2} />
+            <Line type="monotone" dataKey="price" stroke="#408830" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>

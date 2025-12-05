@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function GET(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1"
+    if (!rateLimit(ip, 60, 60000)) { // 60 requests per minute
+      return NextResponse.json([], { status: 429 })
+    }
+
     const { searchParams } = new URL(req.url)
     const ticker = searchParams.get("ticker")
     const startDate = searchParams.get("startDate")

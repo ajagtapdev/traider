@@ -1,138 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, User, Trophy, Calculator, Menu, X } from "lucide-react";
-import { Bar, Pie, Line } from "react-chartjs-2";
+import { Home, Trophy, Menu, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  ArcElement,
-  Title,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
   Tooltip,
-  Legend,
-} from "chart.js"
-// import { useQuery } from "convex/react";
-// import { api } from "../convex/_generated/api";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+  ResponsiveContainer,
+  Cell,
+  CartesianGrid,
+} from "recharts";
 
 const menuItems = [
   { icon: Home, label: "Trading Simulator", path: "/" },
-  { icon: User, label: "Profile", path: "/profile" },
   { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
-  { icon: Calculator, label: "Finance Calculator", path: "/calculator" },
 ];
 
-// Pseudo data for portfolio visualizations
-const portfolioData = {
-  initialInvestment: 10000,
-  currentValue: 2000,
-  stocks: [
-    { name: "AAPL", value: 2000 },
-    { name: "GOOGL", value: 1500 },
-    { name: "AMZN", value: 2500 },
-    { name: "MSFT", value: 2000 },
-  ],
-  valueOverTime: [
-    { date: "2023-01-01", value: 10000 },
-    { date: "2023-02-01", value: 10500 },
-    { date: "2023-03-01", value: 11200 },
-    { date: "2023-04-01", value: 11800 },
-    { date: "2023-05-01", value: 12500 },
-  ],
-};
-
-// interface tradeRecord {
-//   initialInvestment: number;
-//   finalValue: number;
-//   valueOverTime: { date: string; value: number }[];
-// }
-
-
+const PIE_COLORS = [
+  "rgba(16, 138, 53, 0.6)",
+  "rgba(30, 201, 135, 0.6)",
+  "rgba(103, 230, 83, 0.6)",
+  "rgba(0, 255, 4, 0.39)",
+];
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const initialInvestment = portfolioData.initialInvestment;
-  const currentValue = portfolioData.currentValue;
-  const percentIncrease =
-    ((currentValue - initialInvestment) / initialInvestment) * 100;
+  const [portfolioData, setPortfolioData] = useState<any>(null);
 
-  const barChartData = {
-    labels: ["Initial Investment", "Current Value"], // Now each bar has its own label
-    datasets: [
-      {
-        label: "Portfolio Value ($)",
-        data: [initialInvestment, currentValue], // Two separate bars
-        backgroundColor: [
-          "rgba(148, 151, 153, 0.6)", // Blue for Initial Investment
-          percentIncrease >= 0
-            ? "rgba(34, 197, 94, 0.6)" // Green if positive growth
-            : "rgba(239, 68, 68, 0.6)", // Red if negative growth
-        ],
-        borderColor: [
-          "rgba(148, 151, 153, 0.6)", // Blue for Initial Investment
-          percentIncrease >= 0 ? "rgb(34, 197, 94)" : "rgb(239, 68, 68)",
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
+  // In a real app, you'd fetch this from your backend / API
+  // For now, we'll keep it null to show the "No trades" state unless populated
+  // Example fetch:
+  // useEffect(() => {
+  //   fetch('/api/portfolio')
+  //     .then(res => res.json())
+  //     .then(data => setPortfolioData(data))
+  //     .catch(err => console.error(err));
+  // }, []);
 
-  const pieChartData = {
-    labels: portfolioData.stocks.map((stock) => stock.name),
-    datasets: [
-      {
-        data: portfolioData.stocks.map((stock) => stock.value),
-        backgroundColor: [
-          "rgba(16, 138, 53, 0.6)",
-          "rgba(30, 201, 135, 0.6)",
-          "rgba(103, 230, 83, 0.6)",
-          "rgba(0, 255, 4, 0.39)",
-        ],
-        borderColor: [
-          "rgba(16, 138, 53, 0.6)",
-          "rgba(30, 201, 135, 0.6)",
-          "rgba(103, 230, 83, 0.6)",
-          "rgba(0, 255, 4, 0.39)",
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const lineChartData = {
-    labels: portfolioData.valueOverTime.map((data) => data.date),
-    datasets: [
-      {
-        label: "Portfolio Value",
-        data: portfolioData.valueOverTime.map((data) => data.value),
-        borderColor: "rgb(34, 197, 94)",
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
-        tension: 0.1,
-        fill: true,
-      },
-    ],
-  }
-
-  // const past = useQuery(api.past.get);
-  // const trade  = useQuery(api.trade.getTrades, { userId: "1" });
+  const hasData = portfolioData !== null;
 
   return (
     <motion.div
@@ -181,69 +95,22 @@ export function Sidebar() {
           >
             <div className="p-6">
               <h2 className="mb-6 text-2xl font-bold text-gray-800">
-                Portfolio
+                Portfolio Analysis
               </h2>
-              <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
-                <h3 className="mb-20 text-lg font-semibold text-gray-800">
-                  Portfolio Performance
-                </h3>
-                <Bar
-                  data={barChartData}
-                  options={{
-                    responsive: true,
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                      },
-                    },
-                  }}
-                />
-              </div>
-                <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
-                  <h3 className="mb-2 text-lg font-semibold text-gray-800">
-                    Portfolio Distribution
-                  </h3>
-                  <Pie data={pieChartData} options={{ responsive: true }} />
+              
+              {!hasData ? (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                  <p>No trades executed yet.</p>
+                  <p className="text-sm">Start trading to see portfolio analytics.</p>
                 </div>
-                <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
-                  <h3 className="mb-2 text-lg font-semibold text-gray-800">
-                    Portfolio Value Over Time
-                  </h3>
-                  <Line data={lineChartData} options={{ responsive: true }} />
+              ) : (
+                <div className="grid gap-6 md:grid-cols-2">
+                   {/* Charts would go here when data is connected */}
+                   <div className="p-4 bg-white/50 rounded-lg border border-[#E8D8B2]">
+                      <p>Portfolio data loaded...</p>
+                   </div>
                 </div>
-                <div className="rounded-lg border border-[#E8D8B2] bg-white/50 p-4">
-                  <h3 className="mb-2 text-lg font-semibold text-gray-800">Past Trade Records</h3>
-                    <details className="mb-4"></details>
-                    {portfolioData.valueOverTime.map((record, index) => (
-                    <div key={index} className="mb-4">
-                      <h4 className="text-md font-semibold text-gray-700">Trade {index + 1}</h4>
-                      <p className="text-sm text-gray-600">
-                        Performance:{" "}
-                        {(((record.value - portfolioData.initialInvestment) / portfolioData.initialInvestment) * 100).toFixed(2)}%
-                      </p>
-                      <div className="mt-2 h-24">
-                        <Line
-                        data={{
-                          labels: portfolioData.valueOverTime.map((data) => data.date),
-                          datasets: [
-                          {
-                            label: "Value",
-                            data: portfolioData.valueOverTime.map((data) => data.value),
-                            borderColor: "rgb(34, 197, 94)",
-                            backgroundColor: "rgba(34, 197, 94, 0.1)",
-                            tension: 0.1,
-                            fill: true,
-                          },
-                          ],
-                        }}
-                        options={{ responsive: true, maintainAspectRatio: false }}
-                        />
-                      </div>
-                    </div>
-                    ))}
-                </div>
-              </div>
+              )}
             </div>
           </motion.div>
         )}

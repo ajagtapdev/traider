@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
   ChevronRight,
-  Users,
-  TrendingUp,
-  Shield,
-  BookOpen,
+  Brain,
+  Zap,
+  Trophy,
+  LineChart,
 } from "lucide-react";
 
 const fadeIn = {
@@ -43,8 +43,7 @@ export default function About() {
             der
           </h1>
           <p className="text-xl text-gray-600 mb-12 text-center max-w-3xl mx-auto">
-            Empowering traders with cutting-edge technology and unparalleled
-            insights
+            Master the markets with our high-performance simulation engine and AI-driven insights.
           </p>
         </motion.div>
 
@@ -56,17 +55,20 @@ export default function About() {
         >
           <motion.div variants={fadeIn}>
             <h2 className="text-3xl font-semibold text-gray-900 mb-4">
-              Our Mission
+              Simulation First
             </h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              At traider, we&apos;re on a mission to democratize trading by
-              providing professional-grade tools and education to traders of all
-              experience levels. We believe that with the right resources and
-              knowledge, anyone can become a successful trader.
+              Traider provides a risk-free environment to test your trading strategies. 
+              Powered by a custom C++ engine, our simulator offers professional-grade order execution 
+              and portfolio analytics without putting real capital at risk.
+            </p>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Whether you are testing a new hypothesis or learning the ropes, our tools 
+              give you the data you need to make informed decisions.
             </p>
             <Link href="/simulator">
               <Button className="bg-[#509048] hover:bg-[#509048]/90 text-white">
-                Try Our Simulator <ChevronRight className="ml-2 h-4 w-4" />
+                Start Trading <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </motion.div>
@@ -75,24 +77,24 @@ export default function About() {
             variants={fadeIn}
           >
             <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-              Key Statistics
+              Platform Features
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-[#80b048]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#80b048]">100K+</p>
-                <p className="text-sm text-gray-600">Active Users</p>
+                <p className="text-lg font-bold text-[#80b048]">C++ Core</p>
+                <p className="text-sm text-gray-600">High-Speed Engine</p>
               </div>
               <div className="text-center p-4 bg-[#509048]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#509048]">$500M+</p>
-                <p className="text-sm text-gray-600">Trading Volume</p>
+                <p className="text-lg font-bold text-[#509048]">AI Analyst</p>
+                <p className="text-sm text-gray-600">Llama 3.3 Powered</p>
               </div>
               <div className="text-center p-4 bg-[#509048]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#509048]">24/7</p>
-                <p className="text-sm text-gray-600">Support</p>
+                <p className="text-lg font-bold text-[#509048]">Real-Time</p>
+                <p className="text-sm text-gray-600">Market Data</p>
               </div>
               <div className="text-center p-4 bg-[#80b048]/10 rounded-lg">
-                <p className="text-4xl font-bold text-[#80b048]">5+</p>
-                <p className="text-sm text-gray-600">Trading Tools</p>
+                <p className="text-lg font-bold text-[#80b048]">Global</p>
+                <p className="text-sm text-gray-600">Leaderboards</p>
               </div>
             </div>
           </motion.div>
@@ -105,29 +107,29 @@ export default function About() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <h2 className="text-3xl font-semibold text-gray-900 mb-8 text-center">
-            Why Choose traider?
+            Built for Serious Learning
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                icon: TrendingUp,
-                title: "Advanced Analytics",
-                description: "Real-time market data and predictive insights",
+                icon: Zap,
+                title: "Fast Execution",
+                description: "Experience low-latency simulated fills with our native C++ backend.",
               },
               {
-                icon: Shield,
-                title: "Secure Platform",
-                description: "Bank-level security to protect your assets",
+                icon: Brain,
+                title: "AI Analysis",
+                description: "Get honest, no-fluff investment insights from our AI financial analyst.",
               },
               {
-                icon: Users,
-                title: "Community Support",
-                description: "Connect with fellow traders and experts",
+                icon: Trophy,
+                title: "Compete",
+                description: "Climb the leaderboard and prove your strategy against other traders.",
               },
               {
-                icon: BookOpen,
-                title: "Educational Resources",
-                description: "24/7 AI trading assistant",
+                icon: LineChart,
+                title: "Deep Metrics",
+                description: "Analyze your performance with professional-grade portfolio tools.",
               },
             ].map((feature, index) => (
               <motion.div
@@ -153,18 +155,21 @@ export default function About() {
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           <h2 className="text-3xl font-semibold text-gray-900 mb-6 text-center">
-            Our Commitment to You
+            Ready to Test Your Strategy?
           </h2>
           <p className="text-gray-600 mb-6 text-center max-w-3xl mx-auto leading-relaxed">
-            At traider, we&apos;re committed to your success. Our platform is
-            designed to grow with you, providing the tools and insights you need
-            at every stage of your trading journey. From beginners to seasoned
-            professionals, we&apos;re here to help you achieve your financial goals.
+            Join other traders in a realistic simulation environment. Use our calculator to plan your moves, 
+            consult our AI for market sentiment, and execute your trades on a professional platform.
           </p>
-          <div className="flex justify-center">
-            <Link href="/">
+          <div className="flex justify-center gap-4">
+            <Link href="/simulator">
               <Button className="bg-[#408830] hover:bg-[#408830]/90 text-white">
-                Start Your Journey
+                Open Simulator
+              </Button>
+            </Link>
+            <Link href="/leaderboard">
+              <Button variant="outline" className="border-[#408830] text-[#408830] hover:bg-[#408830]/10">
+                View Leaderboard
               </Button>
             </Link>
           </div>

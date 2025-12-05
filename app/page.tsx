@@ -215,8 +215,8 @@ export default function Home() {
               analytics to help you make informed trading decisions.
             </p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button className="bg-[#509048] hover:bg-[#80b048]/90 text-white px-8 py-6 text-lg">
-                Create Account
+              <Button asChild className="bg-[#509048] hover:bg-[#80b048]/90 text-white px-8 py-6 text-lg">
+                <Link href="/simulator">Start Trading Now</Link>
               </Button>
             </motion.div>
           </motion.div>

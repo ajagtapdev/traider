@@ -7,7 +7,17 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
+import sys
+
+# Try to import the C++ extension
+try:
+    import traider_cpp
+    CPP_AVAILABLE = True
+    print("C++ extension loaded successfully")
+except ImportError as e:
+    CPP_AVAILABLE = False
+    print(f"Warning: C++ extension not available: {e}")
 
 # Load environment variables from .env.local
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../.env.local"))
@@ -150,6 +160,155 @@ async def get_stock_news_route(ticker: str, date: str):
         "response": bullet_points
     }
 
-
-
     return bullet_points
+
+# --- C++ Integration Endpoints ---
+
+class TechnicalIndicatorsRequest(BaseModel):
+    ticker: str
+    period: int = 20
+
+@app.post("/technical-indicators")
+def get_technical_indicators(request: TechnicalIndicatorsRequest):
+    """
+    Calculate technical indicators using the high-performance C++ engine.
+    """
+    if not CPP_AVAILABLE:
+        raise HTTPException(status_code=501, detail="C++ extension not available")
+    
+    try:
+        # Fetch data for enough history (e.g. 2 years to be safe for EMAs etc)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=730)
+        
+        stock_data = get_data(
+            request.ticker,
+            start_date=start_date,
+            end_date=end_date,
+            index_as_date=False
+        )
+        
+        if stock_data is None or stock_data.empty:
+            raise HTTPException(status_code=404, detail="Stock data not found")
+
+        # Prepare data for C++
+        prices = stock_data['close'].tolist()
+        volumes = stock_data['volume'].tolist()
+        dates = stock_data['date'].astype(str).tolist()
+
+        # Calculate indicators using C++
+        # We'll calculate a standard suite
+        sma_val = traider_cpp.indicators.sma(prices, request.period)
+        ema_val = traider_cpp.indicators.ema(prices, request.period)
+        rsi_val = traider_cpp.indicators.rsi(prices, 14)
+        vwap_val = traider_cpp.indicators.vwap(prices, volumes)
+        
+        # Bollinger Bands (default 20, 2.0)
+        bb = traider_cpp.indicators.bollinger_bands(prices, 20, 2.0)
+        
+        # Combine results
+        # We return the last N points to keep payload size reasonable, or all if requested
+        # Let's return the last 100 points aligned with dates
+        
+        limit = 100
+        if len(prices) > limit:
+            result_slice = slice(-limit, None)
+        else:
+            result_slice = slice(None)
+
+        response_data = []
+        for i in range(len(prices))[result_slice]:
+            response_data.append({
+                "date": dates[i],
+                "price": prices[i],
+                "sma": sma_val[i],
+                "ema": ema_val[i],
+                "rsi": rsi_val[i],
+                "vwap": vwap_val[i],
+                "bb_upper": bb[0][i],
+                "bb_lower": bb[1][i]
+            })
+            
+        return response_data
+
+    except Exception as e:
+        print(f"Error in technical-indicators: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class TradeAnalysisRequest(BaseModel):
+    ticker: str
+    buy_date: str
+    sell_date: str
+    initial_investment: float
+
+@app.post("/analyze-trade")
+def analyze_trade(request: TradeAnalysisRequest):
+    """
+    Analyze a specific trade using C++ BacktestEngine.
+    Compares the user's trade against a buy-and-hold strategy for the same period.
+    """
+    if not CPP_AVAILABLE:
+        raise HTTPException(status_code=501, detail="C++ extension not available")
+
+    try:
+        # 1. Fetch Historical Data
+        start_date = datetime.strptime(request.buy_date, "%Y-%m-%d")
+        end_date = datetime.strptime(request.sell_date, "%Y-%m-%d")
+        
+        # Add buffer for indicators if needed, but for simple trade analysis, exact range is key
+        # We need daily data
+        stock_data = get_data(
+            request.ticker,
+            start_date=start_date,
+            end_date=end_date + timedelta(days=1), # Include sell date
+            index_as_date=False
+        )
+
+        if stock_data is None or stock_data.empty:
+            raise HTTPException(status_code=404, detail="Stock data not found for the given period")
+
+        prices = stock_data['close'].tolist()
+        dates = stock_data['date'].astype(str).tolist()
+
+        # 2. Setup C++ Backtest Engine
+        # We simulate the user's trade: Buy at start, Sell at end.
+        # We can use the BacktestEngine to run this simulation to get metrics.
+        
+        # Strategy Signal: Buy on day 0, Sell on last day
+        # 1 = Buy, -1 = Sell, 0 = Hold
+        signals = [0] * len(prices)
+        signals[0] = 1 # Buy all
+        if len(signals) > 1:
+            signals[-1] = -1 # Sell all
+        
+        bt_engine = traider_cpp.backtesting.BacktestEngine(request.initial_investment)
+        result = bt_engine.run_simple(request.ticker, prices, signals)
+
+        # 3. Construct Response
+        metrics = result.metrics
+        equity_curve = result.equity_curve
+        
+        # Calculate raw profit/loss for clarity
+        final_value = equity_curve[-1]
+        profit = final_value - request.initial_investment
+        pct_return = (profit / request.initial_investment) * 100
+
+        return {
+            "ticker": request.ticker,
+            "period": f"{request.buy_date} to {request.sell_date}",
+            "initial_investment": request.initial_investment,
+            "final_value": final_value,
+            "profit": profit,
+            "percent_return": pct_return,
+            "max_drawdown": metrics.max_drawdown,
+            "sharpe_ratio": metrics.sharpe_ratio, # Annualized
+            "total_return_metric": metrics.total_return, # From C++
+            "equity_curve": [
+                {"date": d, "value": v} 
+                for d, v in zip(dates, equity_curve)
+            ]
+        }
+
+    except Exception as e:
+        print(f"Error analyzing trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
