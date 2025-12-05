@@ -19,6 +19,14 @@
 
 # production
 /build
+backend/build/
+backend/venv/
+backend/__pycache__/
+*.pyc
+*.pyd
+*.obj
+*.lib
+*.exp
 
 # misc
 .DS_Store
