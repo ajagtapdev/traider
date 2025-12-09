@@ -26,7 +26,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.3",
     "lucide-react": "^0.475.0",
-    "next": "^15.1.7",
+    "next": "15.1.9",
     "openai": "^4.85.1",
     "papaparse": "^5.5.2",
     "radix-ui": "^1.1.3",
